@@ -1,0 +1,3 @@
+
+project: circuit.c
+	gcc 
