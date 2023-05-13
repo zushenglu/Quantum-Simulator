@@ -11,7 +11,9 @@ typedef struct struct_gate {
 } Gate;
 
 typedef struct struct_operation {
-    float complex parameters;
+    char * name;
+    float complex *parameters;
+    int param_ind;
     Gate *gate;
     struct struct_operation *next;
 } Operation;
@@ -21,8 +23,8 @@ typedef struct struct_qubit {
     int depth;
     float complex x;
     float complex y;
-    Gate *next;
-    Gate *last;
+    Operation *next;
+    Operation *last;
 } Qubit; 
 
 typedef struct struct_circuit {
@@ -88,6 +90,25 @@ void PRINT_CIRCUIT_STATE(Circuit* qc, int size){
 
 }
 
+void PRINT_QUBIT_OP(Circuit* qc, int qubit){
+
+
+    printf("q%d|- ",qubit);
+    Operation *op = qc->Q[qubit]->next;
+    for (int i=0; i<qc->Q[qubit]->depth; i++){
+
+        if (op->param_ind != -1){
+            printf("\t%s %d\t", op->name, op->param_ind);
+        }
+        else{
+            printf("\t%s\t", op->name);
+        }
+
+        op = op->next;
+    }
+    printf("\n");
+}
+
 // speace instead of new line
 void PRINT_COMPLEX(float complex input){ 
     printf("%.1f%+.1fi ",  creal(input), cimag(input));
@@ -139,19 +160,55 @@ Circuit* INIT_CIRCUIT(int size){
     return qc;
 }
 
+// add a operation, gate is a pointer to gate, qbt_ind is qubit index,
+// circuit is circuit, param is a list of parameters.
+// only works for single qubit gate
+void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *param, char* name){
 
-// add single qubit gate
-void AddGate(Gate* gate, Qubit *qubit){
+    Qubit *qubit = c->Q[qbt_ind];
+    qubit->depth += 1;
+    
+    Operation *op = malloc(sizeof(Operation));
+    op->name = name;
+    op->gate = gate;
+    op->next = NULL;
+    op->param_ind=-1;
+    op->parameters = param;
 
     if (qubit->next == NULL){
-        qubit->next = gate;
-        qubit->last = gate;
+        qubit->next = op;
+        qubit->last = op;
     }
     else{
-        qubit->last->next = gate;
+        qubit->last->next = op;
+        qubit->last = op;
     }
-    qubit->depth+=1;
 
+}
+
+void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex *param, char* name){
+
+    for (int i=0; i<input_num; i++){
+        Operation *op = malloc(sizeof(Operation));
+        op->gate = gate;
+        op->next = NULL;
+        op->parameters = param;
+        op->param_ind = i;
+        op->name = name;
+
+        int index = qbt_ind[i];
+        Qubit *qubit = c->Q[index];
+        
+        if (qubit->next == NULL){
+            qubit->next = op;
+            qubit->last = op;
+        }
+        else{
+            qubit->last->next = op;
+            qubit->last = op;
+        }
+        qubit->depth+=1;
+    }
 }
 
 int main(int argnum, char** arg){
@@ -217,7 +274,16 @@ int main(int argnum, char** arg){
     CNOT.mx[3][2] = 1;
     CNOT.mx[3][3] = 0;
 
+    Add_OP(&PauliX,0,qc,NULL,"PauliX");
+    Add_OP(&PauliX,1,qc,NULL,"PauliX");
+    int a[2] = {0,1};
+    Add_OPM(&CNOT, a, 2, qc, NULL, "CNOT");
 
+    int b[2] = {1,0};
+    Add_OPM(&CNOT, b, 2, qc, NULL, "CNOT");
+
+    PRINT_QUBIT_OP(qc, 0);
+    PRINT_QUBIT_OP(qc, 1);
 
 
     // Gate PauliY;
