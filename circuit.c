@@ -8,8 +8,13 @@ typedef struct struct_gate {
     int dimension;
     int param_id;
     float complex **mx;
-    struct struct_gate *next;
 } Gate;
+
+typedef struct struct_operation {
+    float complex parameters;
+    Gate *gate;
+    struct struct_operation *next;
+} Operation;
 
 typedef struct struct_qubit {
     int index;
@@ -17,12 +22,15 @@ typedef struct struct_qubit {
     float complex x;
     float complex y;
     Gate *next;
+    Gate *last;
 } Qubit; 
 
 typedef struct struct_circuit {
     Qubit **Q;
     int depth;
 } Circuit;
+
+
 
 // #define INIT_QBT(X) Qubit X = {.x = 1, .y =0}
 
@@ -52,6 +60,22 @@ typedef struct struct_circuit {
             add placeholder gates until equal depth
         
         add multi-qubit gate to them 
+
+*/
+
+/*
+    design for circuit;
+    each qubit connects to a linkedlist of operations instead of gates;
+    
+    operation consists parameters and gate
+
+    add function will add parameters and additional information for the gates
+        this is the non static part of the gate
+    
+    add function will connect operation with the gate so it can be reused
+        gate is not static, even parameterized gate will be dealt by operation
+    
+    
 
 */
 
@@ -87,13 +111,13 @@ void PRINT_MX(float complex **mx, int sl){
 
 Qubit* INIT_QUBIT(int index){
 
-
     Qubit *qubit = malloc(sizeof(Qubit));
     qubit->depth = 0;
     qubit->index = index;
     qubit->x = 1;
     qubit->y = 0;
     qubit->next = NULL;
+    qubit->last = NULL;
 
     return qubit;
 }
@@ -115,8 +139,19 @@ Circuit* INIT_CIRCUIT(int size){
     return qc;
 }
 
-void PauliX(Qubit* qubit){
-    
+
+// add single qubit gate
+void AddGate(Gate* gate, Qubit *qubit){
+
+    if (qubit->next == NULL){
+        qubit->next = gate;
+        qubit->last = gate;
+    }
+    else{
+        qubit->last->next = gate;
+    }
+    qubit->depth+=1;
+
 }
 
 int main(int argnum, char** arg){
@@ -125,6 +160,7 @@ int main(int argnum, char** arg){
 
     printf("z = %.1f%+.1fi\n", creal(x), cimag(x));
     
+    // ex with qubit
     Qubit qubit;
     // INIT_QBT(qubit);
     qubit.x = 4.0*I + 5;
@@ -133,7 +169,7 @@ int main(int argnum, char** arg){
     printf("mx = %.1f%+.1fi\n", creal(qubit.x), cimag(qubit.x));
     printf("my = %.1f%+.1fi\n", creal(qubit.y), cimag(qubit.y));
 
-    int SIZE = 2;
+    int SIZE = 3;
 
     Circuit *qc = INIT_CIRCUIT(SIZE);
 
@@ -141,7 +177,7 @@ int main(int argnum, char** arg){
 
     Gate PauliX;
     PauliX.dimension=2;
-    PauliX.param_id=0;
+    PauliX.param_id=NULL;
     PauliX.mx = malloc(sizeof(float complex)*PauliX.dimension);
     for (int i=0;i<PauliX.dimension;i++){
         float complex *row = malloc(sizeof(float complex)*PauliX.dimension);
@@ -153,6 +189,36 @@ int main(int argnum, char** arg){
     PauliX.mx[1][1] = 0;
 
     PRINT_MX(PauliX.mx, PauliX.dimension);
+
+    Gate CNOT;
+    CNOT.dimension=4;
+    CNOT.mx = malloc(sizeof(float complex)*CNOT.dimension);
+    for (int i=0;i<CNOT.dimension;i++){
+        float complex *row = malloc(sizeof(float complex)*CNOT.dimension);
+        CNOT.mx[i] = row;
+    }
+    CNOT.mx[0][0] = 1;
+    CNOT.mx[0][1] = 0;
+    CNOT.mx[0][2] = 0;
+    CNOT.mx[0][3] = 0;
+
+    CNOT.mx[1][0] = 0;
+    CNOT.mx[1][1] = 1;
+    CNOT.mx[1][2] = 0;
+    CNOT.mx[1][3] = 0;
+
+    CNOT.mx[2][0] = 0;
+    CNOT.mx[2][1] = 0;
+    CNOT.mx[2][2] = 0;
+    CNOT.mx[2][3] = 1;
+    
+    CNOT.mx[3][0] = 0;
+    CNOT.mx[3][1] = 0;
+    CNOT.mx[3][2] = 1;
+    CNOT.mx[3][3] = 0;
+
+
+
 
     // Gate PauliY;
     // PauliY.dimension=2;
