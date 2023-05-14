@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <complex.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "circuit.h"
 
@@ -13,7 +14,10 @@ typedef struct struct_gate {
 typedef struct struct_operation {
     char * name;
     float complex *parameters;
-    int param_ind;
+    int param_num; // number of parameters there is
+    int param_ind; // if multi-qubit, what order is it?
+    int *impacted_qbts; // if multi-qubit, array of qubits involved
+    int impacted_qbts_num; // if multi-qubit, number of qubits involved
     Gate *gate;
     struct struct_operation *next;
 } Operation;
@@ -81,34 +85,6 @@ typedef struct struct_circuit {
 
 */
 
-void PRINT_CIRCUIT_STATE(Circuit* qc, int size){
-
-    for (int i=0;i<size;i++){
-        printf("q%d = [%.1f%+.1fi, %.1f%+.1fi]\n", i,   creal(qc->Q[i]->x), cimag(qc->Q[i]->x),
-                                                        creal(qc->Q[i]->y), cimag(qc->Q[i]->y));
-    }
-
-}
-
-void PRINT_QUBIT_OP(Circuit* qc, int qubit){
-
-
-    printf("q%d|- ",qubit);
-    Operation *op = qc->Q[qubit]->next;
-    for (int i=0; i<qc->Q[qubit]->depth; i++){
-
-        if (op->param_ind != -1){
-            printf("\t%s %d\t", op->name, op->param_ind);
-        }
-        else{
-            printf("\t%s\t", op->name);
-        }
-
-        op = op->next;
-    }
-    printf("\n");
-}
-
 // speace instead of new line
 void PRINT_COMPLEX(float complex input){ 
     printf("%.1f%+.1fi ",  creal(input), cimag(input));
@@ -127,6 +103,60 @@ void PRINT_MX(float complex **mx, int sl){
         }
         y++;
         printf("\n");
+    }
+}
+
+
+void PRINT_CIRCUIT_STATE(Circuit* qc, int size){
+
+    for (int i=0;i<size;i++){
+        printf("q%d = [%.1f%+.1fi, %.1f%+.1fi]\n", i,   creal(qc->Q[i]->x), cimag(qc->Q[i]->x),
+                                                        creal(qc->Q[i]->y), cimag(qc->Q[i]->y));
+    }
+
+}
+
+void PRINT_QUBIT_OP(Circuit* qc, int qubit){
+
+    printf("q%d|- ",qubit);
+    Operation *op = qc->Q[qubit]->next;
+    for (int i=0; i<qc->Q[qubit]->depth; i++){
+
+        // if not single qubit, print order
+        if (op->param_ind != -1){
+            printf("\t%s ", op->name);
+            for (int i=0;i<op->impacted_qbts_num;i++){
+                printf("%d-", op->impacted_qbts[i]);
+            }
+            printf("\t");
+        }
+        // if single qubit, just print the name
+        else{
+            // if parameterized, print parameter
+            if (op->parameters != NULL){
+                printf("\t%s( ", op->name);
+
+                int paraNum = op->param_num;
+                for (int i=0;i<paraNum;i++){
+                    PRINT_COMPLEX(op->parameters[i]);
+                }
+                printf(")\t");
+
+            }
+            // if simple gate without parameter, simply print the thing
+            else{
+                printf("\t%s\t", op->name);
+            }
+        }
+
+        op = op->next;
+    }
+    printf("\n");
+}
+
+void PRINT_CIRCUIT(Circuit* qc, int size){
+    for (int i=0;i<size;i++){
+        PRINT_QUBIT_OP(qc, i);
     }
 }
 
@@ -163,7 +193,7 @@ Circuit* INIT_CIRCUIT(int size){
 // add a operation, gate is a pointer to gate, qbt_ind is qubit index,
 // circuit is circuit, param is a list of parameters.
 // only works for single qubit gate
-void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *param, char* name){
+void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *params, int param_num, char* name){
 
     Qubit *qubit = c->Q[qbt_ind];
     qubit->depth += 1;
@@ -172,8 +202,11 @@ void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *param, char* nam
     op->name = name;
     op->gate = gate;
     op->next = NULL;
+    op->impacted_qbts = &qbt_ind;
+    op->impacted_qbts_num=1;
     op->param_ind=-1;
-    op->parameters = param;
+    op->parameters = params;
+    op->param_num = param_num;
 
     if (qubit->next == NULL){
         qubit->next = op;
@@ -186,15 +219,19 @@ void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *param, char* nam
 
 }
 
-void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex *param, char* name){
+// for adding multiqubit gates, parameterized or not
+void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex *params, int param_num, char* name){
 
     for (int i=0; i<input_num; i++){
         Operation *op = malloc(sizeof(Operation));
         op->gate = gate;
         op->next = NULL;
-        op->parameters = param;
+        op->parameters = params;
+        op->impacted_qbts = qbt_ind;
+        op->impacted_qbts_num = input_num;
         op->param_ind = i;
         op->name = name;
+        op->param_num = param_num;
 
         int index = qbt_ind[i];
         Qubit *qubit = c->Q[index];
@@ -209,6 +246,28 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
         }
         qubit->depth+=1;
     }
+}
+
+// void Add_OPP(Gate* gate, int *qbt_ind, Circuit *c, float complex *params, char *name){
+
+// }
+
+Gate* RZ(float input){
+    Gate *g = malloc(sizeof(Gate));
+    g->dimension = 2;
+    g->param_id=-1;
+    float complex **mx = malloc(sizeof(float complex*)*2);
+    for (int i=0;i<2;i++){
+        float complex *row = malloc(sizeof(float complex)* 2);
+        mx[i] = row;
+    }
+
+    mx[0][0] = exp(-I/2*input);
+    mx[0][1] = 0;
+    mx[1][0] = 0;
+    mx[1][1] = exp(I/2*input);
+    g->mx = mx;
+    return g;
 }
 
 int main(int argnum, char** arg){
@@ -226,7 +285,7 @@ int main(int argnum, char** arg){
     printf("mx = %.1f%+.1fi\n", creal(qubit.x), cimag(qubit.x));
     printf("my = %.1f%+.1fi\n", creal(qubit.y), cimag(qubit.y));
 
-    int SIZE = 3;
+    int SIZE = 5;
 
     Circuit *qc = INIT_CIRCUIT(SIZE);
 
@@ -274,35 +333,32 @@ int main(int argnum, char** arg){
     CNOT.mx[3][2] = 1;
     CNOT.mx[3][3] = 0;
 
-    Add_OP(&PauliX,0,qc,NULL,"PauliX");
-    Add_OP(&PauliX,1,qc,NULL,"PauliX");
+    // add parameterized single gate
+    Gate *rz = RZ(M_1_PI);
+    float complex rz_para_temp = (float) M_1_PI;
+    Add_OP(rz,2,qc,&rz_para_temp,1,"RZ");
+
+    // add regular single gate
+    Add_OP(&PauliX,0,qc,NULL,0,"PauliX");
+
+    // add unparameterized multi-gate
     int a[2] = {0,1};
-    Add_OPM(&CNOT, a, 2, qc, NULL, "CNOT");
+    Add_OPM(&CNOT, a, 2, qc, NULL,0, "CNOT");
 
+    // add unparameterized multi-gate
     int b[2] = {1,0};
-    Add_OPM(&CNOT, b, 2, qc, NULL, "CNOT");
+    Add_OPM(&CNOT, b, 2, qc, NULL,0, "CNOT");
 
-    PRINT_QUBIT_OP(qc, 0);
-    PRINT_QUBIT_OP(qc, 1);
+    int c[2] = {4,3};
+    Add_OPM(&CNOT, c, 2, qc, NULL,0, "CNOT");
+
+    Gate *rz2 = RZ(M_1_PI/4);
+    float complex rz_para_temp2 = (float) M_1_PI/4;
+    Add_OP(rz,4,qc,&rz_para_temp2,1,"RZ");
 
 
-    // Gate PauliY;
-    // PauliY.dimension=2;
-    // PauliY.param_id=0;
-    // PauliY.mx = malloc(sizeof(float complex)*PauliY.dimension*PauliY.dimension);
-    // PauliY.mx[0][0] = 0;
-    // PauliY.mx[0][1] = -I;
-    // PauliY.mx[1][0] = I;
-    // PauliY.mx[1][1] = 0;
+    PRINT_CIRCUIT(qc,SIZE);
 
-    // Gate PauliZ;
-    // PauliZ.dimension=2;
-    // PauliZ.param_id=0;
-    // PauliZ.mx = malloc(sizeof(float complex)*PauliZ.dimension*PauliZ.dimension);
-    // PauliZ.mx[0][0] = 1;
-    // PauliZ.mx[0][1] = 0;
-    // PauliZ.mx[1][0] = 0;
-    // PauliZ.mx[1][1] = -1;
 
     return 0;
 }
