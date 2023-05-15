@@ -85,6 +85,9 @@ typedef struct struct_circuit {
 
 */
 
+// static gate:
+
+
 // speace instead of new line
 void PRINT_COMPLEX(float complex input){ 
     printf("%.1f%+.1fi ",  creal(input), cimag(input));
@@ -105,7 +108,6 @@ void PRINT_MX(float complex **mx, int sl){
         printf("\n");
     }
 }
-
 
 void PRINT_CIRCUIT_STATE(Circuit* qc, int size){
 
@@ -135,6 +137,9 @@ void PRINT_QUBIT_OP(Circuit* qc, int qubit){
             // if parameterized, print parameter
             if (op->parameters != NULL){
                 printf("\t%s( ", op->name);
+
+                // printf("paranum: %d\n", op->param_num);
+                // PRINT_COMPLEX(op->parameters[0]);
 
                 int paraNum = op->param_num;
                 for (int i=0;i<paraNum;i++){
@@ -195,6 +200,7 @@ Circuit* INIT_CIRCUIT(int size){
 // only works for single qubit gate
 void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *params, int param_num, char* name){
 
+
     Qubit *qubit = c->Q[qbt_ind];
     qubit->depth += 1;
     
@@ -215,6 +221,10 @@ void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *params, int para
     else{
         qubit->last->next = op;
         qubit->last = op;
+    }
+
+    if (qubit->depth > c->depth){
+        c->depth = qubit->depth;
     }
 
 }
@@ -245,14 +255,14 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
             qubit->last = op;
         }
         qubit->depth+=1;
+        if (qubit->depth > c->depth){
+            c->depth = qubit->depth;
+        }
     }
 }
 
-// void Add_OPP(Gate* gate, int *qbt_ind, Circuit *c, float complex *params, char *name){
 
-// }
-
-Gate* RZ(float input){
+Gate* RZ_mx(float input){
     Gate *g = malloc(sizeof(Gate));
     g->dimension = 2;
     g->param_id=-1;
@@ -270,6 +280,75 @@ Gate* RZ(float input){
     return g;
 }
 
+Gate* initCX(){
+    Gate *CNOT = malloc(sizeof(Gate));
+    CNOT->dimension=4;
+    CNOT->mx = malloc(sizeof(float complex)*CNOT->dimension);
+    for (int i=0;i<CNOT->dimension;i++){
+        float complex *row = malloc(sizeof(float complex)*CNOT->dimension);
+        CNOT->mx[i] = row;
+    }
+    CNOT->mx[0][0] = 1;
+    CNOT->mx[0][1] = 0;
+    CNOT->mx[0][2] = 0;
+    CNOT->mx[0][3] = 0;
+
+    CNOT->mx[1][0] = 0;
+    CNOT->mx[1][1] = 1;
+    CNOT->mx[1][2] = 0;
+    CNOT->mx[1][3] = 0;
+
+    CNOT->mx[2][0] = 0;
+    CNOT->mx[2][1] = 0;
+    CNOT->mx[2][2] = 0;
+    CNOT->mx[2][3] = 1;
+    
+    CNOT->mx[3][0] = 0;
+    CNOT->mx[3][1] = 0;
+    CNOT->mx[3][2] = 1;
+    CNOT->mx[3][3] = 0;
+
+    return CNOT;
+}
+
+Gate* initPX(){
+    Gate *PauliX = malloc(sizeof(Gate));
+    PauliX->dimension=2;
+    PauliX->param_id=NULL;
+    PauliX->mx = malloc(sizeof(float complex)*PauliX->dimension);
+    for (int i=0;i<PauliX->dimension;i++){
+        float complex *row = malloc(sizeof(float complex)*PauliX->dimension);
+        PauliX->mx[i] = row;
+    }
+    PauliX->mx[0][0] = 0;
+    PauliX->mx[0][1] = 1;
+    PauliX->mx[1][0] = 1;
+    PauliX->mx[1][1] = 0;
+    return PauliX;
+}
+
+void PauliX(Circuit *qc, int target_qbt){
+    Gate *gate = initPX();
+    Add_OP(gate,target_qbt,qc,NULL,0,"X");
+}
+
+void CX(Circuit *qc, int control_qbt, int target_qbt){
+    int *qbts = malloc(sizeof(int)*2);
+    qbts[0] = control_qbt;
+    qbts[1] = target_qbt;
+    
+    Add_OPM(initCX(), qbts, 2,qc,NULL, 0, "CNOT");
+}
+
+void RZ(Circuit *qc, int target_qbt, float complex rotation){
+
+    printf("rz input: %f\n", rotation);
+    float complex *param = malloc(sizeof(float complex));
+    *param = rotation;
+    Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
+}
+
+ 
 int main(int argnum, char** arg){
 
     double complex x = 4.0 * I; 
@@ -289,72 +368,30 @@ int main(int argnum, char** arg){
 
     Circuit *qc = INIT_CIRCUIT(SIZE);
 
-    PRINT_CIRCUIT_STATE(qc,SIZE);
+    // PRINT_CIRCUIT_STATE(qc,SIZE);
 
-    Gate PauliX;
-    PauliX.dimension=2;
-    PauliX.param_id=NULL;
-    PauliX.mx = malloc(sizeof(float complex)*PauliX.dimension);
-    for (int i=0;i<PauliX.dimension;i++){
-        float complex *row = malloc(sizeof(float complex)*PauliX.dimension);
-        PauliX.mx[i] = row;
-    }
-    PauliX.mx[0][0] = 0;
-    PauliX.mx[0][1] = 1;
-    PauliX.mx[1][0] = 1;
-    PauliX.mx[1][1] = 0;
-
-    PRINT_MX(PauliX.mx, PauliX.dimension);
-
-    Gate CNOT;
-    CNOT.dimension=4;
-    CNOT.mx = malloc(sizeof(float complex)*CNOT.dimension);
-    for (int i=0;i<CNOT.dimension;i++){
-        float complex *row = malloc(sizeof(float complex)*CNOT.dimension);
-        CNOT.mx[i] = row;
-    }
-    CNOT.mx[0][0] = 1;
-    CNOT.mx[0][1] = 0;
-    CNOT.mx[0][2] = 0;
-    CNOT.mx[0][3] = 0;
-
-    CNOT.mx[1][0] = 0;
-    CNOT.mx[1][1] = 1;
-    CNOT.mx[1][2] = 0;
-    CNOT.mx[1][3] = 0;
-
-    CNOT.mx[2][0] = 0;
-    CNOT.mx[2][1] = 0;
-    CNOT.mx[2][2] = 0;
-    CNOT.mx[2][3] = 1;
-    
-    CNOT.mx[3][0] = 0;
-    CNOT.mx[3][1] = 0;
-    CNOT.mx[3][2] = 1;
-    CNOT.mx[3][3] = 0;
+    // Gate *CNOT = initCX();
 
     // add parameterized single gate
-    Gate *rz = RZ(M_1_PI);
-    float complex rz_para_temp = (float) M_1_PI;
-    Add_OP(rz,2,qc,&rz_para_temp,1,"RZ");
+    // Gate *rz = RZ(M_1_PI);
+    // float complex rz_para_temp = (float) M_1_PI;
+    // Add_OP(rz,2,qc,&rz_para_temp,1,"RZ");
+
+    RZ(qc,2,M_PI);
 
     // add regular single gate
-    Add_OP(&PauliX,0,qc,NULL,0,"PauliX");
+    PauliX(qc,0);
 
-    // add unparameterized multi-gate
-    int a[2] = {0,1};
-    Add_OPM(&CNOT, a, 2, qc, NULL,0, "CNOT");
+    // // add unparameterized multi-gate
+    CX(qc,0,1);
+    CX(qc,1,0);
+    CX(qc,4,3);
 
-    // add unparameterized multi-gate
-    int b[2] = {1,0};
-    Add_OPM(&CNOT, b, 2, qc, NULL,0, "CNOT");
-
-    int c[2] = {4,3};
-    Add_OPM(&CNOT, c, 2, qc, NULL,0, "CNOT");
-
-    Gate *rz2 = RZ(M_1_PI/4);
-    float complex rz_para_temp2 = (float) M_1_PI/4;
-    Add_OP(rz,4,qc,&rz_para_temp2,1,"RZ");
+    RZ(qc,4,M_PI/4);
+    CX(qc,2,3);
+    CX(qc,1,3);
+    CX(qc,0,4);
+    
 
 
     PRINT_CIRCUIT(qc,SIZE);
