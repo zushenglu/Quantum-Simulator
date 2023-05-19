@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <complex.h>
 
+#include "simulator.h"
+#include "qubit.h"
+#include "gate.h"
+#include "circuit.h"
+
+
 /*
     general idea:
         read the circuit by circuit depth
@@ -30,8 +36,26 @@
 
 */
 
-int main(int argnum, char** arg){
+
+void simulate(Qubit *qc, int target_qbt){
 
 
-    return 0;
+
+
 }
+
+void Transform(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
+
+    for (int i=0;i<mx_dim;i++){
+        float complex temp = vector[i];
+        vector[i] = 0;
+        for (int j=0;j<mx_dim;j++){
+            vector[i] += mx[i][j] * temp;
+        }
+    }
+
+}
+
+
+
+

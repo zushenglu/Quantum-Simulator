@@ -8,13 +8,12 @@
 
 #include <string.h>
 
+
+#include "qubit.h"
+#include "gate.h"
+
 #include "circuit.h"
 
-typedef struct struct_gate {
-    int dimension;
-    int param_id;
-    float complex **mx;
-} Gate;
 
 typedef struct struct_operation {
     char * name;
@@ -26,21 +25,6 @@ typedef struct struct_operation {
     Gate *gate;
     struct struct_operation *next;
 } Operation;
-
-typedef struct struct_qubit {
-    int index;
-    int depth;
-    float complex x;
-    float complex y;
-    Operation *next;
-    Operation *last;
-} Qubit; 
-
-typedef struct struct_circuit {
-    Qubit **Q;
-    int depth;
-} Circuit;
-
 
 
 // #define INIT_QBT(X) Qubit X = {.x = 1, .y =0}
@@ -175,18 +159,6 @@ void PRINT_CIRCUIT(Circuit* qc, int size){
     }
 }
 
-Qubit* INIT_QUBIT(int index){
-
-    Qubit *qubit = malloc(sizeof(Qubit));
-    qubit->depth = 0;
-    qubit->index = index;
-    qubit->x = 1;
-    qubit->y = 0;
-    qubit->next = NULL;
-    qubit->last = NULL;
-
-    return qubit;
-}
 
 Circuit* INIT_CIRCUIT(int size){
 
@@ -271,71 +243,6 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
     }
 }
 
-Gate* RZ_mx(float input){
-    Gate *g = malloc(sizeof(Gate));
-    g->dimension = 2;
-    g->param_id=-1;
-    float complex **mx = malloc(sizeof(float complex*)*2);
-    for (int i=0;i<2;i++){
-        float complex *row = malloc(sizeof(float complex)* 2);
-        mx[i] = row;
-    }
-
-    mx[0][0] = exp(-I/2*input);
-    mx[0][1] = 0;
-    mx[1][0] = 0;
-    mx[1][1] = exp(I/2*input);
-    g->mx = mx;
-    return g;
-}
-
-Gate* initCX(){
-    Gate *CNOT = malloc(sizeof(Gate));
-    CNOT->dimension=4;
-    CNOT->mx = malloc(sizeof(float complex)*CNOT->dimension);
-    for (int i=0;i<CNOT->dimension;i++){
-        float complex *row = malloc(sizeof(float complex)*CNOT->dimension);
-        CNOT->mx[i] = row;
-    }
-    CNOT->mx[0][0] = 1;
-    CNOT->mx[0][1] = 0;
-    CNOT->mx[0][2] = 0;
-    CNOT->mx[0][3] = 0;
-
-    CNOT->mx[1][0] = 0;
-    CNOT->mx[1][1] = 1;
-    CNOT->mx[1][2] = 0;
-    CNOT->mx[1][3] = 0;
-
-    CNOT->mx[2][0] = 0;
-    CNOT->mx[2][1] = 0;
-    CNOT->mx[2][2] = 0;
-    CNOT->mx[2][3] = 1;
-    
-    CNOT->mx[3][0] = 0;
-    CNOT->mx[3][1] = 0;
-    CNOT->mx[3][2] = 1;
-    CNOT->mx[3][3] = 0;
-
-    return CNOT;
-}
-
-Gate* initPX(){
-    Gate *PauliX = malloc(sizeof(Gate));
-    PauliX->dimension=2;
-    PauliX->param_id=NULL;
-    PauliX->mx = malloc(sizeof(float complex)*PauliX->dimension);
-    for (int i=0;i<PauliX->dimension;i++){
-        float complex *row = malloc(sizeof(float complex)*PauliX->dimension);
-        PauliX->mx[i] = row;
-    }
-    PauliX->mx[0][0] = 0;
-    PauliX->mx[0][1] = 1;
-    PauliX->mx[1][0] = 1;
-    PauliX->mx[1][1] = 0;
-    return PauliX;
-}
-
 void PauliX(Circuit *qc, int target_qbt){
     Gate *gate = initPX();
     Add_OP(gate,target_qbt,qc,NULL,0,"X");
@@ -357,64 +264,3 @@ void RZ(Circuit *qc, int target_qbt, float complex rotation){
     Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
 }
 
-void simulate(Qubit *qc, int target_qbt){
-
-
-
-
-}
-
-void Transform(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
-
-    for (int i=0;i<mx_dim;i++){
-        float complex temp = vector[i];
-        vector[i] = 0;
-        for (int j=0;j<mx_dim;j++){
-            vector[i] += mx[i][j] * temp;
-        }
-    }
-
-}
-
-int main(int argnum, char** arg){
-
-    double complex x = 4.0 * I; 
-
-    printf("z = %.1f%+.1fi\n", creal(x), cimag(x));
-    
-    // ex with qubit
-    Qubit qubit;
-    // INIT_QBT(qubit);
-    qubit.x = 4.0*I + 5;
-    qubit.y = 2.0*I + 3;
-
-    printf("mx = %.1f%+.1fi\n", creal(qubit.x), cimag(qubit.x));
-    printf("my = %.1f%+.1fi\n", creal(qubit.y), cimag(qubit.y));
-
-    int SIZE = 5;
-
-    Circuit *qc = INIT_CIRCUIT(SIZE);
-
-    // add parameterized single gate
-    RZ(qc,2,M_PI);
-
-    // add regular single gate
-    PauliX(qc,0);
-
-    // // add unparameterized multi-gate
-    CX(qc,0,1);
-    CX(qc,1,0);
-    CX(qc,4,3);
-
-    RZ(qc,4,M_PI/4);
-    CX(qc,2,3);
-    CX(qc,1,3);
-    CX(qc,0,4);
-    
-
-
-    PRINT_CIRCUIT(qc,SIZE);
-
-
-    return 0;
-}
