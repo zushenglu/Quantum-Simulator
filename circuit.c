@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <unistd.h>
+#include <pthread.h>
+
+#include <string.h>
+
 #include "circuit.h"
 
 typedef struct struct_gate {
@@ -150,7 +155,12 @@ void PRINT_QUBIT_OP(Circuit* qc, int qubit){
             }
             // if simple gate without parameter, simply print the thing
             else{
-                printf("\t%s\t", op->name);
+                if (strlen(op->name) < 8){
+                    printf("\t%s\t\t", op->name);
+                }
+                else{
+                    printf("\t%s\t", op->name);
+                }
             }
         }
 
@@ -261,7 +271,6 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
     }
 }
 
-
 Gate* RZ_mx(float input){
     Gate *g = malloc(sizeof(Gate));
     g->dimension = 2;
@@ -348,7 +357,25 @@ void RZ(Circuit *qc, int target_qbt, float complex rotation){
     Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
 }
 
- 
+void simulate(Qubit *qc, int target_qbt){
+
+
+
+
+}
+
+void Transform(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
+
+    for (int i=0;i<mx_dim;i++){
+        float complex temp = vector[i];
+        vector[i] = 0;
+        for (int j=0;j<mx_dim;j++){
+            vector[i] += mx[i][j] * temp;
+        }
+    }
+
+}
+
 int main(int argnum, char** arg){
 
     double complex x = 4.0 * I; 
@@ -368,15 +395,7 @@ int main(int argnum, char** arg){
 
     Circuit *qc = INIT_CIRCUIT(SIZE);
 
-    // PRINT_CIRCUIT_STATE(qc,SIZE);
-
-    // Gate *CNOT = initCX();
-
     // add parameterized single gate
-    // Gate *rz = RZ(M_1_PI);
-    // float complex rz_para_temp = (float) M_1_PI;
-    // Add_OP(rz,2,qc,&rz_para_temp,1,"RZ");
-
     RZ(qc,2,M_PI);
 
     // add regular single gate

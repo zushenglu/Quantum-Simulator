@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <complex.h>
+#include <stdlib.h>
+
+#include <unistd.h>
+#include <pthread.h>
 
 struct Qubit {
     int index;
@@ -88,11 +92,30 @@ void structEX(){
 }
 
 
+void *myThreadFun(void *vargp)
+{
+    // if sleep here, the program ends without printing anything, why?
+    sleep(1); 
+    printf("Printing GeeksQuiz from Thread \n");
+    return NULL;
+}
+   
+
 int main(int argnum, char** arg){
 
 
 
-    structEX();
+    // structEX();
+
+    // if not join, the new thread don't print with sleep
+    // if join, main thread always end after new thread
+
+    pthread_t thread_id;
+    printf("Before Thread\n");
+    pthread_create(&thread_id, NULL, myThreadFun, NULL);
+    // pthread_join(thread_id, NULL);
+    printf("After Thread\n");
+    pthread_exit(0);
 
     return 0;
 }
