@@ -9,12 +9,9 @@
 #include <string.h>
 
 #include "circuit.h"
+#include "gate.h"
 
-typedef struct struct_gate {
-    int dimension;
-    int param_id;
-    float complex **mx;
-} Gate;
+
 
 typedef struct struct_operation {
     char * name;
@@ -269,71 +266,6 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
             c->depth = qubit->depth;
         }
     }
-}
-
-Gate* RZ_mx(float input){
-    Gate *g = malloc(sizeof(Gate));
-    g->dimension = 2;
-    g->param_id=-1;
-    float complex **mx = malloc(sizeof(float complex*)*2);
-    for (int i=0;i<2;i++){
-        float complex *row = malloc(sizeof(float complex)* 2);
-        mx[i] = row;
-    }
-
-    mx[0][0] = exp(-I/2*input);
-    mx[0][1] = 0;
-    mx[1][0] = 0;
-    mx[1][1] = exp(I/2*input);
-    g->mx = mx;
-    return g;
-}
-
-Gate* initCX(){
-    Gate *CNOT = malloc(sizeof(Gate));
-    CNOT->dimension=4;
-    CNOT->mx = malloc(sizeof(float complex)*CNOT->dimension);
-    for (int i=0;i<CNOT->dimension;i++){
-        float complex *row = malloc(sizeof(float complex)*CNOT->dimension);
-        CNOT->mx[i] = row;
-    }
-    CNOT->mx[0][0] = 1;
-    CNOT->mx[0][1] = 0;
-    CNOT->mx[0][2] = 0;
-    CNOT->mx[0][3] = 0;
-
-    CNOT->mx[1][0] = 0;
-    CNOT->mx[1][1] = 1;
-    CNOT->mx[1][2] = 0;
-    CNOT->mx[1][3] = 0;
-
-    CNOT->mx[2][0] = 0;
-    CNOT->mx[2][1] = 0;
-    CNOT->mx[2][2] = 0;
-    CNOT->mx[2][3] = 1;
-    
-    CNOT->mx[3][0] = 0;
-    CNOT->mx[3][1] = 0;
-    CNOT->mx[3][2] = 1;
-    CNOT->mx[3][3] = 0;
-
-    return CNOT;
-}
-
-Gate* initPX(){
-    Gate *PauliX = malloc(sizeof(Gate));
-    PauliX->dimension=2;
-    PauliX->param_id=NULL;
-    PauliX->mx = malloc(sizeof(float complex)*PauliX->dimension);
-    for (int i=0;i<PauliX->dimension;i++){
-        float complex *row = malloc(sizeof(float complex)*PauliX->dimension);
-        PauliX->mx[i] = row;
-    }
-    PauliX->mx[0][0] = 0;
-    PauliX->mx[0][1] = 1;
-    PauliX->mx[1][0] = 1;
-    PauliX->mx[1][1] = 0;
-    return PauliX;
 }
 
 void PauliX(Circuit *qc, int target_qbt){
