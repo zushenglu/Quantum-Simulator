@@ -1,16 +1,17 @@
+CC = gcc
+CFLAGS = -Wall -Wextra
 
-gate.o: gate.c
-	gcc -c gate.c
+SRCS = gate.c circuit.c
+OBJS = $(SRCS:.c=.o) 
 
-circuit.c: gate.c
-	gcc -c circuit.c
+all: myproj
 
-circuit.o: circuit.c
-	gcc -c circuit.c
+myproj: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
-myproj: circuit.o, gate.o
-	gcc -o myproj gate.o circuit.o
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 
 clean:
-	rm -f gate.o circuit.o myproj
-
+	rm -f $(OBJS) myproj
