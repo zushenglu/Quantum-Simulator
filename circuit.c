@@ -14,19 +14,6 @@
 
 #include "circuit.h"
 
-
-typedef struct struct_operation {
-    char * name;
-    float complex *parameters;
-    int param_num; // number of parameters there is
-    int param_ind; // if multi-qubit, what order is it?
-    int *impacted_qbts; // if multi-qubit, array of qubits involved
-    int impacted_qbts_num; // if multi-qubit, number of qubits involved
-    Gate *gate;
-    struct struct_operation *next;
-} Operation;
-
-
 // #define INIT_QBT(X) Qubit X = {.x = 1, .y =0}
 
 /*

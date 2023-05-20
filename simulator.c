@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <complex.h>
+#include <stdlib.h>
 
 #include "simulator.h"
 #include "qubit.h"
@@ -44,18 +45,57 @@ void simulate(Qubit *qc, int target_qbt){
 
 }
 
-void Transform(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
+float complex* MX_MAP(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
+
+    float complex *new = (float complex*) calloc(vec_dim, sizeof(float complex));
 
     for (int i=0;i<mx_dim;i++){
-        float complex temp = vector[i];
-        vector[i] = 0;
+
         for (int j=0;j<mx_dim;j++){
-            vector[i] += mx[i][j] * temp;
+            // PRINT_COMPLEX(vector[j]);
+            // printf(" * ");
+            // PRINT_COMPLEX(mx[i][j]);
+            // printf("\n");
+            new[i] += mx[i][j] * vector[j];
         }
     }
+
+    // printf("new state: ");
+    // PRINT_COMPLEX(vector[0]);
+    // PRINT_COMPLEX(vector[1]);
+    // printf("\n");
+
+    return new;
 
 }
 
 
+float complex* TS_PD(float complex *vector1, int vec1_dim, float complex *vector2, int vec2_dim){
 
+    float complex* new = (float complex*) calloc(vec1_dim * vec2_dim, sizeof(float complex));
+
+    for (int i=0; i<vec1_dim;i++){
+
+        for (int j=0; i<vec2_dim; j++){
+
+            new[i*vec2_dim+vec2_dim] = vector1[i] * vector2[j];
+
+        }
+    }
+
+    return new;
+
+}
+
+/*
+
+a = [1/sqrt2 1/sqrt2] b = [1/sqrt2 1/sqrt2]
+a ox b = [ 1/2 1/2 1/2 1/2]
+
+[1,0,0,0     [1/2    [1/2   [00           [1/4
+ 0,1,0,0  ox  1/2  =  1/2 =  01   => pr =  1/4
+ 0,0,0,1      1/2     1/2    10            1/4
+ 0,0,1,0]     1/2]    1/2    11]           1/4]
+
+*/
 
