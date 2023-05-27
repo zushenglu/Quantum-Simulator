@@ -57,7 +57,9 @@ int main(int argnum, char** arg){
     qbt->x = arr[0];
     qbt->y = arr[1];
 
-    PRINT_QUBIT_STAT(qc->Q[3]);
+    PRINT_QUBIT_STAT(qc->Q[3]);\
+
+    
 
     // PRINT_MX(qc->Q[3]->next->gate->mx, qc->Q[3]->next->gate->dimension);
 

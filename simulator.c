@@ -37,12 +37,32 @@
 
 */
 
+/*
+    Damn ngl i think its kinda fucked lmao ...
 
-void simulate(Qubit *qc, int target_qbt){
+    path1: read them all together, create a big array for all states and modifi them by steps
+        requires restructre the simulator
+        requires some math for details of implementaion
+
+    path2: keep the same structure, but when entanglement happens, make it dependent while keep
+    the original state. modify it when state ended
+        requires extra process for entanglement and keeping the state
+        requires some tha for details
+
+    path3: Stop acting like you know the way like you know the rules! 
+        there are no rules man we are lost :(  
+    
+
+*/
+
+void simulate(Circuit* circuit, int target_qbt){
 
 
 
+}
 
+void process_qbt(Circuit*, int qbt_ind){
+    
 }
 
 float complex* MX_MAP(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
@@ -69,7 +89,6 @@ float complex* MX_MAP(float complex * vector, int vec_dim, float complex ** mx, 
 
 }
 
-
 float complex* TS_PD(float complex *vector1, int vec1_dim, float complex *vector2, int vec2_dim){
 
     float complex* new = (float complex*) calloc(vec1_dim * vec2_dim, sizeof(float complex));
@@ -86,6 +105,23 @@ float complex* TS_PD(float complex *vector1, int vec1_dim, float complex *vector
     return new;
 
 }
+
+
+
+void Transform(int * qbts, Circuit *qc, int qbt_num){
+
+    
+
+}
+
+float complex* Init_QS(int qbts){
+    float complex* a = calloc(2*qbts, sizeof(float complex));
+    return a;
+}
+
+
+
+
 
 /*
 

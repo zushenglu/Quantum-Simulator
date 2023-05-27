@@ -19,6 +19,7 @@ typedef struct struct_operation {
 
 typedef struct struct_circuit {
     struct struct_qubit **Q;
+    float complex* states;
     int depth;
 } Circuit;
 
