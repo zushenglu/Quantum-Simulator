@@ -8,6 +8,7 @@ all: myproj
 
 myproj: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS)
+	./myproj
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

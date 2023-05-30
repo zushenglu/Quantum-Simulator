@@ -2,10 +2,12 @@
 #include <stdio.h>
 #include <complex.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "qubit.h"
 #include "gate.h"
 #include "circuit.h"
+#include "simulator.h"
 
 int main(int argnum, char** arg){
 
@@ -22,30 +24,45 @@ int main(int argnum, char** arg){
     printf("mx = %.1f%+.1fi\n", creal(qubit.x), cimag(qubit.x));
     printf("my = %.1f%+.1fi\n", creal(qubit.y), cimag(qubit.y));
 
-    int SIZE = 5;
+    int SIZE = 3;
 
     Circuit *qc = INIT_CIRCUIT(SIZE);
 
     // add parameterized single gate
-    RZ(qc,2,M_PI);
+    // RZ(qc,2,M_PI);
 
     // add regular single gate
     PauliX(qc,0);
 
     // // add unparameterized multi-gate
-    CX(qc,0,1);
+    // CX(qc,0,1);
     CX(qc,1,0);
-    CX(qc,4,3);
 
-    RZ(qc,4,M_PI/4);
-    CX(qc,2,3);
-    CX(qc,1,3);
-    CX(qc,0,4);
-    
+    // RZ(qc,2,M_PI/4);
 
-
+    // PauliX(qc,3);
     PRINT_CIRCUIT(qc,SIZE);
 
+    // PRINT_QUBIT_STAT(qc->Q[3]);
+
+    // float complex *arr = malloc(sizeof(float complex)*2);
+    // Qubit* qbt = qc->Q[3];
+    // arr[0] = qbt->x;
+    // arr[1] = qbt->y;
+
+    // Operation* op = qbt->next;
+    // Gate* tg = op->gate;
+
+    // arr = MX_MAP(arr,2,tg->mx, tg->dimension);
+    // qbt->x = arr[0];
+    // qbt->y = arr[1];
+
+    // PRINT_QUBIT_STAT(qc->Q[3]);
+
+    
+    simulate(qc);
+
+    // PRINT_MX(qc->Q[3]->next->gate->mx, qc->Q[3]->next->gate->dimension);
 
     return 0;
 }

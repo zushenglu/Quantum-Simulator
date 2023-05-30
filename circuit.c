@@ -14,19 +14,6 @@
 
 #include "circuit.h"
 
-
-typedef struct struct_operation {
-    char * name;
-    float complex *parameters;
-    int param_num; // number of parameters there is
-    int param_ind; // if multi-qubit, what order is it?
-    int *impacted_qbts; // if multi-qubit, array of qubits involved
-    int impacted_qbts_num; // if multi-qubit, number of qubits involved
-    Gate *gate;
-    struct struct_operation *next;
-} Operation;
-
-
 // #define INIT_QBT(X) Qubit X = {.x = 1, .y =0}
 
 /*
@@ -173,6 +160,7 @@ Circuit* INIT_CIRCUIT(int size){
         Qubit* qubit = INIT_QUBIT(i);
         qc->Q[i] = qubit;
     }
+    qc->size = size;
 
     return qc;
 }
@@ -264,3 +252,7 @@ void RZ(Circuit *qc, int target_qbt, float complex rotation){
     Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
 }
 
+void Hadamard(Circuit *qc, int target_qbt){
+    Gate *gate = initH();
+    Add_OP(gate,target_qbt,qc,NULL,0,"H");
+}

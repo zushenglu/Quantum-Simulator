@@ -15,5 +15,6 @@ typedef struct struct_qubit {
 
 Qubit* INIT_QUBIT(int index);
 
+void PRINT_QUBIT_STAT(Qubit* qubit);
 
 #endif
