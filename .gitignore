@@ -2,3 +2,6 @@ a.out
 .vscode
 backup
 .DS_Store
+*.o
+scout
+myproj
