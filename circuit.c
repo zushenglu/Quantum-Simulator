@@ -160,6 +160,7 @@ Circuit* INIT_CIRCUIT(int size){
         Qubit* qubit = INIT_QUBIT(i);
         qc->Q[i] = qubit;
     }
+    qc->size = size;
 
     return qc;
 }
@@ -251,3 +252,7 @@ void RZ(Circuit *qc, int target_qbt, float complex rotation){
     Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
 }
 
+void Hadamard(Circuit *qc, int target_qbt){
+    Gate *gate = initH();
+    Add_OP(gate,target_qbt,qc,NULL,0,"H");
+}

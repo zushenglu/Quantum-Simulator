@@ -21,6 +21,7 @@ typedef struct struct_circuit {
     struct struct_qubit **Q;
     float complex* states;
     int depth;
+    int size;
 } Circuit;
 
 void PRINT_COMPLEX(float complex input);
@@ -38,6 +39,7 @@ void Add_OPM(struct struct_gate * gate, int *qbt_ind, int input_num, Circuit *c,
 void PauliX(Circuit *qc, int target_qbt);
 void CX(Circuit *qc, int control_qbt, int target_qbt);
 void RZ(Circuit *qc, int target_qbt, float complex rotation);
+void Hadamard(Circuit *qc, int target_qbt);
 
 
 #endif

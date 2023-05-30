@@ -84,7 +84,22 @@ Gate* initPX(){
     return PauliX;
 }
 
-
+Gate* initH(){
+    Gate *Hada = malloc(sizeof(Gate));
+    Hada->dimension=2;
+    Hada->param_id=NULL;
+    Hada->mx = malloc(sizeof(float complex)*Hada->dimension);
+    for (int i=0;i<Hada->dimension;i++){
+        float complex *row = malloc(sizeof(float complex)*Hada->dimension);
+        Hada->mx[i] = row;
+    }
+    float complex num = 1/sqrt(2);
+    Hada->mx[0][0] = num;
+    Hada->mx[0][1] = num;
+    Hada->mx[1][0] = num;
+    Hada->mx[1][1] = -num;
+    return Hada;
+}
 /*
 // not sure
 Gate* TO_UNITARY(Gate * gate, int dimension){
