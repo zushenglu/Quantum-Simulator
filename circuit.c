@@ -256,3 +256,8 @@ void Hadamard(Circuit *qc, int target_qbt){
     Gate *gate = initH();
     Add_OP(gate,target_qbt,qc,NULL,0,"H");
 }
+
+void Identity(Circuit *qc, int target_qbt){
+    Gate *gate=initI();
+    Add_OP(gate, target_qbt, qc, NULL, 0, "I");
+}
