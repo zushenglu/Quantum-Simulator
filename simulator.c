@@ -169,9 +169,9 @@ float complex* MX_MAPL(float complex * vector, int vec_dim, float complex ** mx,
 
 }
 
-float complex* APPLY_qbt_gate(float complex* cur_state, int sv_len, Qubit *qbt, int qbt_ind, int tot_qbt, float complex** identity){
+// apply given gate, return statevector after complete the transformation
+float complex* APPLY_qbt_gate(float complex* cur_state, int sv_len, Operation* op, int qbt_ind, int tot_qbt, float complex** identity){
 
-    Operation* op = qbt->next;
     float complex** gmx = op->gate->mx;
 
     if (op == NULL){
@@ -225,44 +225,15 @@ void simulate(Circuit* circuit){
     float complex *statevector = calloc(pow(2,sv_size),sizeof(float complex));
     float complex **Identity = initI()->mx;
     
+    // initialize state
     statevector[0] = 1;
 
-
-    /*
-    // process qubit index
-    int ind = 0;
-    Operation* op = circuit->Q[0]->next;
-
-    PRINT_MX(op->gate->mx,op->gate->dimension);
-
-    // init identity, it should be made avaliable for everybody
-    Gate* gate = initH();
-    float complex ** Identity = malloc(sizeof(float complex*) * 2);
-    Identity[0] = malloc(sizeof(float complex) * 2);
-    Identity[1] = malloc(sizeof(float complex) * 2);
-    Identity[0][0] = 1;
-    Identity[1][1] = 1;
-    Identity[0][1] = 0;
-    Identity[1][0] = 0;
-
-
-    // following process should be done iteratively
-    // let i = acting qbt ind, n = tot qbts
-    // I i times, MPD Gate->mx, TP I n-i-1 times
-
-    // get lgm for this operation (x * I)
-    float complex ** lgm = TS_MPD(Identity,gate->mx,2,2,gate->dimension, gate->dimension);
-    lgm = TS_MPD(lgm, Identity, 4,4,2,2);
-
-    PRINT_MX(lgm, 4 * gate->dimension); 
-
-    // map statevector
-    statevector = MX_MAPL(statevector,sv_size, lgm, 4*gate->dimension);
-    */
-
    // apply h gate on q0
-    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[0],0,tot_qbt,Identity);
+
+    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[0]->next,0,tot_qbt,Identity);
     PRINT_VECTOR(statevector,sv_size);
+
+
 
 
 
