@@ -213,8 +213,160 @@ float complex* APPLY_qbt_gate(float complex* cur_state, int sv_len, Operation* o
     return cur_state;
 }
 
-float complex* APPLY_qbts_gate(float complex* cur_state, int sv_len, Qubit *qbt, int qbt_ind, int tot_qbt, float complex** identity){
+// extract a 2x2 square matrix at start_ind
+float complex ** ExtractSqrtMx(float complex** mx,int start_x, int start_y){
 
+    float complex ** tbtmx = malloc(sizeof(float complex*)*2);
+    tbtmx[0] = calloc(2, sizeof(float complex));
+    tbtmx[1] = calloc(2, sizeof(float complex));
+
+    tbtmx[0][0] = mx[start_y][start_x];
+    tbtmx[0][1] = mx[start_y][start_x+1];
+    tbtmx[1][0] = mx[start_y+1][start_x];
+    tbtmx[1][1] = mx[start_y+1][start_x+1];
+
+    free(mx);
+    return tbtmx;
+}
+
+float complex ** MX_ADD(float complex ** mx1, float complex ** mx2, int mx_size){
+
+    for (int y=0; y<mx_size;y++){
+
+        for (int x=0; x<mx_size;x++){
+            mx1[y][x] = mx1[y][x] + mx2[y][x];
+        }
+    }
+
+    free(mx2);
+    return mx1;
+
+}
+
+// apply controlled gate, currently only 1-1 control supported
+float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op, int qbt_ind, int tot_qbt, float complex** identity){
+
+    PRINT_VECTOR(cur_state,sv_len);
+    int impacted_qbt = op->impacted_qbts_num;
+    int c_ind = op->impacted_qbts[0];
+    int x_ind = op->impacted_qbts[1];
+
+    float complex ** Xmx = ExtractSqrtMx(op->gate->mx, 2,2);
+
+    // PRINT_MX(Xmx, 2);
+
+    float complex ** Cs1 = malloc(sizeof(float complex * )*2);
+    Cs1[0] = calloc(2,sizeof(float complex));
+    Cs1[1] = calloc(2,sizeof(float complex));
+    Cs1[1][1] = 1;
+    float complex ** Cs0 = malloc(sizeof(float complex *)*2);
+    Cs0[0] = calloc(2,sizeof(float complex));
+    Cs0[1] = calloc(2,sizeof(float complex));
+    Cs0[0][0] = 1;
+    // PRINT_MX(Cs1, 2);
+    // PRINT_MX(Cs0, 2);
+
+
+    printf("%d %d\n", c_ind, x_ind);
+
+    // with n qubits, wheres n-1 tensor product
+    // CX 3->1 with 5 qbt = I I I I [1,0,0,0] I + I X I I [0,0,0,1] I
+    // with n qubits control
+    float complex ** lgm0 = NULL;
+    int lgm0_len = 0;
+    float complex ** lgm1 = NULL;
+    int lgm1_len = 0;
+    
+    // // get cont of |0><0|
+    for (int i=tot_qbt-1; i>=0; i--){
+        printf("%d\n",i+1);
+
+        PRINT_MX(lgm0,lgm0_len);
+        printf("\n");
+        if (i == c_ind){
+            if (lgm0 == NULL){
+                lgm0 = Cs0;
+                lgm0_len += 2;
+            }
+            else{
+                lgm0 = TS_MPD(lgm0,Cs0,lgm0_len,lgm0_len,2,2);
+                lgm0_len *= 2;
+            }
+            continue;
+        }
+        if (i == x_ind) {
+            if (lgm0 == NULL){
+                lgm0 = Cs1;
+                lgm0_len += 2;
+            }
+            else{
+                lgm0 = TS_MPD(lgm0,identity,lgm0_len,lgm0_len,2,2);
+                lgm0_len *= 2;
+            }
+            continue;
+        }
+
+        if (lgm0 == NULL){
+            lgm0 = identity;
+            lgm0_len += 2;
+        }
+        else{
+            // PRINT_MX(lgm0, lgm0_len);
+            printf("\n");
+            // PRINT_MX(identity,2);
+            lgm0 = TS_MPD(lgm0,identity,lgm0_len,lgm0_len,2,2);
+            lgm0_len *= 2;
+        }
+        
+        // PRINT_MX(lgm0, lgm0_len);
+    }
+
+    PRINT_MX(lgm0,lgm0_len);
+    
+    // // get cont of |1><1|
+    for (int i=tot_qbt-1; i>=0; i--){
+
+        if (i == c_ind){
+            if (lgm1 == NULL){
+                lgm1 = Cs1;
+                lgm1_len += 2;
+            }
+            else{
+                lgm1 = TS_MPD(lgm1,Cs1,lgm1_len,lgm1_len,2,2);
+                lgm1_len *= 2;
+            }
+            continue;
+        }
+        if (i == x_ind) {
+            if (lgm1 == NULL){
+                lgm1 = Xmx;
+                lgm1_len += 2;
+            }
+            else{
+                lgm1 = TS_MPD(lgm1,Xmx,lgm1_len,lgm1_len,2,2);
+                lgm1_len *= 2;
+            }
+            continue;
+        }
+
+        if (lgm1 == NULL){
+            lgm1 = identity;
+            lgm1_len += 2;
+        }
+        else{
+            lgm1 = TS_MPD(lgm1,identity,lgm1_len,lgm1_len,2,2);
+            lgm1_len *= 2;
+
+        }
+    }
+
+    // PRINT_MX(lgm1, lgm1_len);
+    float complex ** lgm = MX_ADD(lgm0,lgm1, lgm1_len);
+    printf("\n");
+    PRINT_MX(lgm,lgm0_len);
+
+    cur_state = MX_MAP(cur_state,sv_len,lgm, lgm0_len);
+    // printf("what?\n");
     return cur_state;
 }
 
@@ -231,10 +383,13 @@ void simulate(Circuit* circuit){
    // apply h gate on q0
 
     statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[0]->next,0,tot_qbt,Identity);
+    // PRINT_VECTOR(statevector,sv_size);
+
+    circuit->Q[0]->next = circuit->Q[0]->next->next;
+
+    statevector = APPLY_C_gate(statevector,sv_size,circuit->Q[0]->next,0,tot_qbt,Identity);
     PRINT_VECTOR(statevector,sv_size);
-
-
-
+     
 
 
 

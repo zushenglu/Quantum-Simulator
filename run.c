@@ -37,7 +37,7 @@ int main(int argnum, char** arg){
 
     // // add unparameterized multi-gate
     // CX(qc,0,1);
-    CX(qc,1,0);
+    CX(qc,0,1);
 
     // RZ(qc,2,M_PI/4);
 
