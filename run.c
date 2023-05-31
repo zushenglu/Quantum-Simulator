@@ -32,7 +32,8 @@ int main(int argnum, char** arg){
     // RZ(qc,2,M_PI);
 
     // add regular single gate
-    PauliX(qc,0);
+    // PauliX(qc,0);
+    Hadamard(qc,0);
 
     // // add unparameterized multi-gate
     // CX(qc,0,1);

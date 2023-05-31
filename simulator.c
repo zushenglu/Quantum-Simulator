@@ -70,13 +70,13 @@ void PRINT_VECTOR(float complex *vector, int size){
 float complex** TS_MPD(float complex ** mx1, float complex ** mx2, int mx1w, int mx1h, int mx2w,
     int mx2h){
 
-    float complex ** ftg = malloc(sizeof(float complex*)* mx1h*mx2h);
+    float complex ** lgm = malloc(sizeof(float complex*)* mx1h*mx2h);
     // printf("%d\n", mx1h*mx2h);
     for (int mx1y=0; mx1y<mx1h; mx1y++){ 
         
         // init for row 1 tp
         for (int i=0; i<(mx2h);i++){
-            ftg[mx2h*mx1y+i] = malloc(sizeof(float complex)* mx1w*mx2w);
+            lgm[mx2h*mx1y+i] = malloc(sizeof(float complex)* mx1w*mx2w);
             // printf("%d %d\n", mx2h*mx1y+i, mx1w*mx2w);
         }
 
@@ -88,16 +88,16 @@ float complex** TS_MPD(float complex ** mx1, float complex ** mx2, int mx1w, int
 
             for (int mx2x=0; mx2x<mx2w; mx2x++){
                 for (int mx2y=0; mx2y<mx2h; mx2y++){
-                    printf("%d %d\n", mx1y*mx2h+mx2y, mx1x*mx2w+mx2x);
-                    ftg[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = scalar * mx2[mx2y][mx2x];
-                    // ftg[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = 5;
+                    // printf("%d %d\n", mx1y*mx2h+mx2y, mx1x*mx2w+mx2x);
+                    lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = scalar * mx2[mx2y][mx2x];
+                    // lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = 5;
 
                 }
             }
             
         }
     }
-    return ftg;
+    return lgm;
 
 
 }
@@ -105,13 +105,13 @@ float complex** TS_MPD(float complex ** mx1, float complex ** mx2, int mx1w, int
 float complex** TS_MPDL(float complex ** mx1, float complex ** mx2, int mx1w, int mx1h, int mx2w,
     int mx2h){
 
-    float complex ** ftg = malloc(sizeof(float complex*)* mx1h*mx2h);
+    float complex ** lgm = malloc(sizeof(float complex*)* mx1h*mx2h);
     // printf("%d\n", mx1h*mx2h);
     for (int mx1y=0; mx1y<mx1h; mx1y++){ 
         
         // init for row 1 tp
         for (int i=0; i<(mx2h);i++){
-            ftg[mx2h*mx1y+i] = malloc(sizeof(float complex)* mx1w*mx2w);
+            lgm[mx2h*mx1y+i] = malloc(sizeof(float complex)* mx1w*mx2w);
             // printf("%d %d\n", mx2h*mx1y+i, mx1w*mx2w);
         }
 
@@ -123,9 +123,9 @@ float complex** TS_MPDL(float complex ** mx1, float complex ** mx2, int mx1w, in
 
             for (int mx2x=0; mx2x<mx2w; mx2x++){
                 for (int mx2y=0; mx2y<mx2h; mx2y++){
-                    printf("%d %d\n", mx1y*mx2h+mx2y, mx1x*mx2w+mx2x);
-                    ftg[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = scalar * mx2[mx2y][mx2x];
-                    // ftg[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = 5;
+                    // printf("%d %d\n", mx1y*mx2h+mx2y, mx1x*mx2w+mx2x);
+                    lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = scalar * mx2[mx2y][mx2x];
+                    // lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = 5;
 
                 }
             }
@@ -135,7 +135,7 @@ float complex** TS_MPDL(float complex ** mx1, float complex ** mx2, int mx1w, in
     
     free(mx1);
     free(mx2);
-    return ftg;
+    return lgm;
 
 
 }
@@ -169,16 +169,66 @@ float complex* MX_MAPL(float complex * vector, int vec_dim, float complex ** mx,
 
 }
 
+float complex* APPLY_qbt_gate(float complex* cur_state, int sv_len, Qubit *qbt, int qbt_ind, int tot_qbt, float complex** identity){
 
+    Operation* op = qbt->next;
+    float complex** gmx = op->gate->mx;
+
+    if (op == NULL){
+        return cur_state;
+    }
+
+    // PRINT_VECTOR(cur_state, sv_len);
+    // PRINT_MX(identity,2);
+    float complex** lgm;
+    if (qbt_ind == tot_qbt-1){ // multiply special first
+        lgm = TS_MPD(gmx,identity,2,2,2,2);
+    }
+    else {
+        if (qbt_ind == tot_qbt-2){ // multiply special second
+            lgm = TS_MPD(identity,gmx,2,2,2,2);
+        }
+        else{
+            lgm = TS_MPD(identity, identity,2,2,2,2);
+        }
+    }
+    // PRINT_MX(lgm,4);
+    int lgm_size = 4;
+    for (int i=tot_qbt-3;i>=0;i--){
+        
+        if (i == qbt_ind){
+            lgm = TS_MPD(lgm,gmx,lgm_size,lgm_size,2,2);
+        }
+        else{
+            lgm = TS_MPD(lgm,identity,lgm_size,lgm_size,2,2);
+        }
+
+        lgm_size *= 2;
+    }
+
+    // PRINT_MX(lgm, lgm_size);
+
+    cur_state = MX_MAPL(cur_state,pow(2,tot_qbt),lgm,pow(2,tot_qbt));
+
+    return cur_state;
+}
+
+float complex* APPLY_qbts_gate(float complex* cur_state, int sv_len, Qubit *qbt, int qbt_ind, int tot_qbt, float complex** identity){
+
+    return cur_state;
+}
 
 void simulate(Circuit* circuit){
 
     int tot_qbt = circuit->size;
     int sv_size = pow(2,tot_qbt);
     float complex *statevector = calloc(pow(2,sv_size),sizeof(float complex));
+    float complex **Identity = initI()->mx;
     
     statevector[0] = 1;
 
+
+    /*
     // process qubit index
     int ind = 0;
     Operation* op = circuit->Q[0]->next;
@@ -186,7 +236,7 @@ void simulate(Circuit* circuit){
     PRINT_MX(op->gate->mx,op->gate->dimension);
 
     // init identity, it should be made avaliable for everybody
-    Gate* gate = initPX();
+    Gate* gate = initH();
     float complex ** Identity = malloc(sizeof(float complex*) * 2);
     Identity[0] = malloc(sizeof(float complex) * 2);
     Identity[1] = malloc(sizeof(float complex) * 2);
@@ -200,15 +250,21 @@ void simulate(Circuit* circuit){
     // let i = acting qbt ind, n = tot qbts
     // I i times, MPD Gate->mx, TP I n-i-1 times
 
-    // get ftg for this operation (x * I)
-    float complex ** ftg = TS_MPD(Identity,gate->mx,2,2,gate->dimension, gate->dimension);
-    ftg = TS_MPD(ftg, Identity, 4,4,2,2);
+    // get lgm for this operation (x * I)
+    float complex ** lgm = TS_MPD(Identity,gate->mx,2,2,gate->dimension, gate->dimension);
+    lgm = TS_MPD(lgm, Identity, 4,4,2,2);
 
-    PRINT_MX(ftg, 4 * gate->dimension); 
+    PRINT_MX(lgm, 4 * gate->dimension); 
 
     // map statevector
-    statevector = MX_MAPL(statevector,sv_size, ftg, 4*gate->dimension);
+    statevector = MX_MAPL(statevector,sv_size, lgm, 4*gate->dimension);
+    */
+
+   // apply h gate on q0
+    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[0],0,tot_qbt,Identity);
     PRINT_VECTOR(statevector,sv_size);
+
+
 
 
 }
