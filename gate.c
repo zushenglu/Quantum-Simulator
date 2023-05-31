@@ -122,3 +122,18 @@ Gate* CREATE_GATE(float complex **mx, int dimension){
 }
 
 */
+
+Gate* initI(){
+    Gate *IdentGate = malloc(sizeof(Gate));
+    IdentGate->dimension = 2;
+    IdentGate->param_id = NULL;
+    float complex ** Ident = malloc(sizeof(float complex*) * 2);
+    Ident[0] = malloc(sizeof(float complex) * 2);
+    Ident[1] = malloc(sizeof(float complex) * 2);
+    Ident[0][0] = 1;
+    Ident[1][1] = 1;
+    Ident[0][1] = 0;
+    Ident[1][0] = 0;
+    IdentGate->mx = Ident;
+    return IdentGate;
+}

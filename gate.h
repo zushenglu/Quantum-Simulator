@@ -19,4 +19,6 @@ Gate* initPX();
 
 Gate* initH();
 
+Gate* initI();
+
 #endif
