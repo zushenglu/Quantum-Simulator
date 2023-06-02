@@ -390,6 +390,83 @@ void simulate(Circuit* circuit){
     // initialize quantum state
     statevector[0] = 1; // causing seg fault
 
+
+    int circuit_depth = circuit->depth;
+    Operation *op;
+
+    // iterate by depth
+    for (int d=1; d<=circuit_depth; d++){
+
+        // printf("depth %d\n", d);
+        // PRINT_OP_INFO(circuit->Q[0]->next);
+        // PRINT_OP_INFO(circuit->Q[1]->next);
+        // PRINT_OP_INFO(circuit->Q[2]->next);
+        // loop over circuit
+        int i=0; 
+        while (i < tot_qbt){
+
+            // printf("%d\n", i);
+            // printf("",op)
+            Qubit *qbt = circuit->Q[i];
+            op = qbt->next;
+            // PRINT_OP_INFO(op);
+
+            if (op == NULL){
+                // printf("depth: %d ind: %d op = null\n", d, i);
+                i+=1;
+                continue;
+            }
+            if (op->depth != d){
+                // printf("depth: %d ind: %d op->depth: %d\n", d, i, op->depth);
+                i+=1;
+                continue;
+            }
+            // printf("depth: %d ind: %d\n", d, i);
+            
+            int impacted_qbt = op->impacted_qbts_num;
+
+            if (impacted_qbt > 1){
+                // printf("\t apply control gate\n");
+                statevector = APPLY_C_gate(statevector,sv_size,op,i,tot_qbt,Identity);
+                // printf("impacted: %d\n", impacted_qbt);
+                i+= impacted_qbt;
+                for (int j=0;j<op->impacted_qbts_num;j++){
+                    int temp_index = op->impacted_qbts[j];
+                    // printf("change index: %d\n", temp_index);
+                    Qubit *temp_qbt = circuit->Q[temp_index];
+                    temp_qbt->next = temp_qbt->next->next;
+                }
+
+            }
+            else{
+                // printf("\t apply single gate\n");
+                statevector = APPLY_qbt_gate(statevector,sv_size,op,i,tot_qbt,Identity);
+                
+                qbt->next = op->next;
+                i++;
+
+
+                // if (op->next == NULL){
+                //     circuit->Q[i]->next = NULL;
+                // }
+                // else{
+                //     circuit->Q[i]->next = circuit->Q[i]->next->next;
+                // }
+
+                // PRINT_OP_INFO(op);
+                // PRINT_QUBIT_OP(circuit,i);
+                // circuit->Q[i]->next = op->next;
+                // int ana = op->next == NULL;
+                // printf("\t%s\n",op->next == NULL);
+
+            }
+        }
+
+    }
+
+    PRINT_VECTOR(statevector,sv_size);
+
+/*
    // apply h gate on q0
     printf("1\n");
 
@@ -406,7 +483,8 @@ void simulate(Circuit* circuit){
 
     statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[2]->next,2, tot_qbt,Identity);
     PRINT_VECTOR(statevector,sv_size);
-     
+*/
+
 
 
 

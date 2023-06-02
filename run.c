@@ -28,7 +28,7 @@ int main(int argnum, char** arg){
     int SIZE = 3;
 
     Circuit *qc = INIT_CIRCUIT(SIZE);
-
+ 
     // add parameterized single gate
     // RZ(qc,2,M_PI);
 
@@ -41,6 +41,9 @@ int main(int argnum, char** arg){
     CX(qc,0,1);
 
     RZ(qc,2,M_PI/4);
+    RZ(qc,1,M_PI/4);
+    RZ(qc,1,M_PI/4);
+
 
     printf("hi there \n", qc->Q[2]->next);
 
