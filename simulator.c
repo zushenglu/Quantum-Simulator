@@ -412,7 +412,7 @@ void simulate(Circuit* circuit){
             // printf("",op)
             Qubit *qbt = circuit->Q[i];
             op = qbt->next;
-            PRINT_OP_INFO(op);
+            // PRINT_OP_INFO(op);
 
             if (op == NULL){
                 // printf("depth: %d ind: %d op = null\n", d, i);
@@ -432,7 +432,7 @@ void simulate(Circuit* circuit){
                 // printf("\t apply control gate\n");
                 statevector = APPLY_C_gate(statevector,sv_size,op,i,tot_qbt,Identity);
                 // printf("impacted: %d\n", impacted_qbt);
-                i+= 1;
+                i+= 1; 
                 for (int j=0;j<op->impacted_qbts_num;j++){
                     int temp_index = op->impacted_qbts[j];
                     // printf("change index: %d\n", temp_index);
