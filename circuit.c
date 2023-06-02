@@ -146,6 +146,30 @@ void PRINT_QUBIT_OP(Circuit* qc, int qubit){
     printf("\n");
 }
 
+void PRINT_OP_INFO(Operation *op){
+    if (op == NULL){
+        printf("given op is null\n");
+        return;
+    }
+
+    printf("\nOP info:\n\tname: %s\n\tdepth: %d\n\tnum impacted: %d\n\tindex: ", op->name, op->depth, op->impacted_qbts_num);
+    for (int i=0; i<op->impacted_qbts_num;i++){
+        printf("%d ", op->impacted_qbts[i]);
+    } 
+    printf("\n\tparameters :");
+
+    for (int i=0; i<op->param_num;i++){
+        PRINT_COMPLEX(op->parameters[i]);
+    }
+    printf("\n\tparam index: %d",op->param_ind);
+    if (op->next == NULL){
+        printf("\n\tnext: NULL\n");
+    }
+    else{
+        printf("\n\tnext: %s\n", op->next->name);
+    }
+}  
+
 void PRINT_CIRCUIT(Circuit* qc, int size){
     for (int i=0;i<size;i++){
         PRINT_QUBIT_OP(qc, i);
