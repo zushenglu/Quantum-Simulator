@@ -127,7 +127,7 @@ void PRINT_QUBIT_OP(Circuit* qc, int qubit){
                 for (int i=0;i<paraNum;i++){
                     PRINT_COMPLEX(op->parameters[i]);
                 }
-                printf(")\t");
+                printf(")");
 
             }
             // if simple gate without parameter, simply print the thing

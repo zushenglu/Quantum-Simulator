@@ -292,11 +292,11 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
                 lgm0 = TS_MPD(lgm0,Cs0,lgm0_len,lgm0_len,2,2);
                 lgm0_len *= 2;
             }
-            continue;
+            continue; 
         }
         if (i == x_ind) {
             if (lgm0 == NULL){
-                lgm0 = Cs1;
+                lgm0 = identity;
                 lgm0_len += 2;
             }
             else{
@@ -380,9 +380,9 @@ void simulate(Circuit* circuit){
 
     int tot_qbt = circuit->size;
     int sv_size = pow(2,tot_qbt);
-    printf("%ld\n", sv_size );
-    printf("%zu\n", sizeof(float complex));
-    printf("%zu\n", SIZE_MAX);
+    // printf("%ld\n", sv_size );
+    // printf("%zu\n", sizeof(float complex));
+    // printf("%zu\n", SIZE_MAX);
     float complex *statevector = calloc(sv_size, sizeof(float complex));
 
     float complex **Identity = initI()->mx;
@@ -460,11 +460,13 @@ void simulate(Circuit* circuit){
                 // printf("\t%s\n",op->next == NULL);
 
             }
+
         }
 
     }
 
     PRINT_VECTOR(statevector,sv_size);
+
 
 /*
    // apply h gate on q0
