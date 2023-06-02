@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra 
 
 SRCS = gate.c circuit.c qubit.c simulator.c run.c
 OBJS = $(SRCS:.c=.o) 
