@@ -24,7 +24,7 @@ int main(int argnum, char** arg){
 
     CX(qc,2,0);
     CX(qc,1,2);
-    // Hadamard(qc,1);
+    Hadamard(qc,1);
 
 
 
