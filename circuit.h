@@ -7,6 +7,7 @@ struct struct_qubit;
 struct struct_gate;
 
 typedef struct struct_operation {
+    int depth;
     char * name;
     float complex *parameters;
     int param_num; // number of parameters there is
@@ -28,7 +29,7 @@ void PRINT_COMPLEX(float complex input);
 
 void PRINT_MX(float complex **mx, int sl);
 void PRINT_CIRCUIT_STATE(Circuit* qc, int size);
-
+void PRINT_OP_INFO(Operation* op);
 void PRINT_QUBIT_OP(Circuit* qc, int qubit);
 void PRINT_CIRCUIT(Circuit* qc, int size);
 

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra 
 
 SRCS = gate.c circuit.c qubit.c simulator.c run.c
 OBJS = $(SRCS:.c=.o) 
@@ -16,3 +16,5 @@ myproj: $(OBJS)
 
 clean:
 	rm -f $(OBJS) myproj
+
+debug: 
