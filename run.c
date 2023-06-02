@@ -8,11 +8,12 @@
 #include "gate.h"
 #include "circuit.h"
 #include "simulator.h"
+// brk, sbrk
 
 int main(int argnum, char** arg){
 
     double complex x = 4.0 * I; 
-
+    char *str = "abc";
     printf("z = %.1f%+.1fi\n", creal(x), cimag(x));
     
     // ex with qubit
@@ -39,6 +40,12 @@ int main(int argnum, char** arg){
     // CX(qc,0,1);
     CX(qc,0,1);
 
+    RZ(qc,2,M_PI/4);
+
+    printf("hi there \n", qc->Q[2]->next);
+
+    PRINT_MX(qc->Q[2]->next->gate->mx,qc->Q[2]->next->gate->dimension);
+
     // RZ(qc,2,M_PI/4);
 
     // PauliX(qc,3);
@@ -62,6 +69,7 @@ int main(int argnum, char** arg){
 
     
     simulate(qc);
+
 
     // PRINT_MX(qc->Q[3]->next->gate->mx, qc->Q[3]->next->gate->dimension);
 

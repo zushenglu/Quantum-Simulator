@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "circuit.h" // for rz debug only, remove once fixed
+
 void PRINT_GATE(Gate *gate, int dimension){
 
     printf("\n");
@@ -29,11 +31,16 @@ Gate* RZ_mx(float input){
         mx[i] = row;
     }
 
-    mx[0][0] = exp(-I/2*input);
+
+    mx[0][0] = cexp(-I/2*input);
+    // printf()
     mx[0][1] = 0;
     mx[1][0] = 0;
-    mx[1][1] = exp(I/2*input);
+    mx[1][1] = cexp(I/2*input);
+
     g->mx = mx;
+    // PRINT_MX(mx,2);
+
     return g;
 }
 

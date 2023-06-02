@@ -7,6 +7,7 @@ struct struct_qubit;
 struct struct_gate;
 
 typedef struct struct_operation {
+    int depth;
     char * name;
     float complex *parameters;
     int param_num; // number of parameters there is

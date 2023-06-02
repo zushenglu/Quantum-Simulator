@@ -246,7 +246,7 @@ float complex ** MX_ADD(float complex ** mx1, float complex ** mx2, int mx_size)
 // apply controlled gate, currently only 1-1 control supported
 float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op, int qbt_ind, int tot_qbt, float complex** identity){
 
-    PRINT_VECTOR(cur_state,sv_len);
+    // PRINT_VECTOR(cur_state,sv_len);
     int impacted_qbt = op->impacted_qbts_num;
     int c_ind = op->impacted_qbts[0];
     int x_ind = op->impacted_qbts[1];
@@ -267,7 +267,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
     // PRINT_MX(Cs0, 2);
 
 
-    printf("%d %d\n", c_ind, x_ind);
+    // printf("%d %d\n", c_ind, x_ind);
 
     // with n qubits, wheres n-1 tensor product
     // CX 3->1 with 5 qbt = I I I I [1,0,0,0] I + I X I I [0,0,0,1] I
@@ -279,10 +279,10 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
     
     // // get cont of |0><0|
     for (int i=tot_qbt-1; i>=0; i--){
-        printf("%d\n",i+1);
+        // printf("%d\n",i+1);
 
-        PRINT_MX(lgm0,lgm0_len);
-        printf("\n");
+        // PRINT_MX(lgm0,lgm0_len);
+        // printf("\n");
         if (i == c_ind){
             if (lgm0 == NULL){
                 lgm0 = Cs0;
@@ -312,7 +312,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
         }
         else{
             // PRINT_MX(lgm0, lgm0_len);
-            printf("\n");
+            // printf("\n");
             // PRINT_MX(identity,2);
             lgm0 = TS_MPD(lgm0,identity,lgm0_len,lgm0_len,2,2);
             lgm0_len *= 2;
@@ -321,7 +321,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
         // PRINT_MX(lgm0, lgm0_len);
     }
 
-    PRINT_MX(lgm0,lgm0_len);
+    // PRINT_MX(lgm0,lgm0_len);
     
     // // get cont of |1><1|
     for (int i=tot_qbt-1; i>=0; i--){
@@ -362,32 +362,49 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
 
     // PRINT_MX(lgm1, lgm1_len);
     float complex ** lgm = MX_ADD(lgm0,lgm1, lgm1_len);
-    printf("\n");
-    PRINT_MX(lgm,lgm0_len);
+    // printf("\n");
+    // PRINT_MX(lgm,lgm0_len);
 
     cur_state = MX_MAP(cur_state,sv_len,lgm, lgm0_len);
     // printf("what?\n");
     return cur_state;
 }
 
+typedef struct struct_gate_queue{
+
+};
+
+
 void simulate(Circuit* circuit){
+
 
     int tot_qbt = circuit->size;
     int sv_size = pow(2,tot_qbt);
-    float complex *statevector = calloc(pow(2,sv_size),sizeof(float complex));
+    printf("%ld\n", sv_size );
+    printf("%zu\n", sizeof(float complex));
+    printf("%zu\n", SIZE_MAX);
+    float complex *statevector = calloc(sv_size, sizeof(float complex));
+
     float complex **Identity = initI()->mx;
-    
-    // initialize state
-    statevector[0] = 1;
+
+    // initialize quantum state
+    statevector[0] = 1; // causing seg fault
 
    // apply h gate on q0
+    printf("1\n");
 
     statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[0]->next,0,tot_qbt,Identity);
     // PRINT_VECTOR(statevector,sv_size);
+    printf("2\n");
 
     circuit->Q[0]->next = circuit->Q[0]->next->next;
-
+ 
+    // perform cx gate
     statevector = APPLY_C_gate(statevector,sv_size,circuit->Q[0]->next,0,tot_qbt,Identity);
+    PRINT_VECTOR(statevector,sv_size);
+
+
+    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[2]->next,2, tot_qbt,Identity);
     PRINT_VECTOR(statevector,sv_size);
      
 
