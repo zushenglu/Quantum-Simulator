@@ -207,6 +207,7 @@ float complex* APPLY_qbt_gate(float complex* cur_state, int sv_len, Operation* o
     }
 
     // PRINT_MX(lgm, lgm_size);
+    // printf("\n");
 
     cur_state = MX_MAPL(cur_state,pow(2,tot_qbt),lgm,pow(2,tot_qbt));
 
@@ -394,6 +395,8 @@ void simulate(Circuit* circuit){
     int circuit_depth = circuit->depth;
     Operation *op;
 
+    // printf("circuit depth: %d\n", circuit_depth);
+
     // iterate by depth
     for (int d=1; d<=circuit_depth; d++){
 
@@ -429,7 +432,7 @@ void simulate(Circuit* circuit){
                 // printf("\t apply control gate\n");
                 statevector = APPLY_C_gate(statevector,sv_size,op,i,tot_qbt,Identity);
                 // printf("impacted: %d\n", impacted_qbt);
-                i+= impacted_qbt;
+                i+= 1; 
                 for (int j=0;j<op->impacted_qbts_num;j++){
                     int temp_index = op->impacted_qbts[j];
                     // printf("change index: %d\n", temp_index);
