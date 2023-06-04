@@ -145,6 +145,20 @@ float complex** TS_MPDL(float complex ** mx1, float complex ** mx2, int mx1w, in
     return lgm;
 }
 
+float complex* MX_MAP(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
+
+    float complex *new = (float complex*) calloc(vec_dim, sizeof(float complex));
+
+    for (int i=0;i<mx_dim;i++){
+
+        for (int j=0;j<mx_dim;j++){
+            new[i] += mx[i][j] * vector[j];
+        }
+    }
+
+    return new;
+
+}
 
 float complex* MX_MAPL(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
 
@@ -253,7 +267,7 @@ float complex ** MX_ADD(float complex ** mx1, float complex ** mx2, int mx_size)
 float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op, int qbt_ind, int tot_qbt, float complex** identity){
 
     // PRINT_VECTOR(cur_state,sv_len);
-    int impacted_qbt = op->impacted_qbts_num;
+    // int impacted_qbt = op->impacted_qbts_num;
     int c_ind = op->impacted_qbts[0];
     int x_ind = op->impacted_qbts[1];
 
@@ -376,8 +390,8 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
     return cur_state;
 }
 
-typedef struct struct_gate_queue{
-};
+// typedef struct struct_gate_queue{
+// };
 
 // return array with all Operations at given depth
 Operation** OP_BY_DEPTH(Circuit* circuit, int depth){
@@ -426,6 +440,7 @@ float complex** DEPTH_LGM(Operation ** op_arr, int arr_len, float complex ** ide
 }
 */
 
+/*
 void simulate2(Circuit* circuit){
 
     int tot_qbt = circuit->size;
@@ -462,15 +477,13 @@ void simulate2(Circuit* circuit){
 
 
 }
+*/
 
 void simulate(Circuit* circuit){
 
 
     int tot_qbt = circuit->size;
     int sv_size = pow(2,tot_qbt);
-    // printf("%ld\n", sv_size );
-    // printf("%zu\n", sizeof(float complex));
-    // printf("%zu\n", SIZE_MAX);
     float complex *statevector = calloc(sv_size, sizeof(float complex));
 
     float complex **Identity = initI()->mx;
@@ -482,16 +495,9 @@ void simulate(Circuit* circuit){
     int circuit_depth = circuit->depth;
     Operation *op;
 
-    // printf("circuit depth: %d\n", circuit_depth);
-
     // iterate by depth
     for (int d=1; d<=circuit_depth; d++){
 
-        // printf("depth %d\n", d);
-        // PRINT_OP_INFO(circuit->Q[0]->next);
-        // PRINT_OP_INFO(circuit->Q[1]->next);
-        // PRINT_OP_INFO(circuit->Q[2]->next);
-        // loop over circuit
         int i=0; 
         while (i < tot_qbt){
 
@@ -535,20 +541,6 @@ void simulate(Circuit* circuit){
                 qbt->next = op->next;
                 i++;
 
-
-                // if (op->next == NULL){
-                //     circuit->Q[i]->next = NULL;
-                // }
-                // else{
-                //     circuit->Q[i]->next = circuit->Q[i]->next->next;
-                // }
-
-                // PRINT_OP_INFO(op);
-                // PRINT_QUBIT_OP(circuit,i);
-                // circuit->Q[i]->next = op->next;
-                // int ana = op->next == NULL;
-                // printf("\t%s\n",op->next == NULL);
-
             }
 
         }
@@ -559,57 +551,21 @@ void simulate(Circuit* circuit){
     ResUnit **result = to_prob(statevector,sv_size);
     PRINT_RESULT(result,sv_size);
 
+}
+
 /*
-   // apply h gate on q0
-    printf("1\n");
-
-    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[0]->next,0,tot_qbt,Identity);
-    // PRINT_VECTOR(statevector,sv_size);
-    printf("2\n");
-
-    circuit->Q[0]->next = circuit->Q[0]->next->next;
- 
-    // perform cx gate
-    statevector = APPLY_C_gate(statevector,sv_size,circuit->Q[0]->next,0,tot_qbt,Identity);
-    PRINT_VECTOR(statevector,sv_size);
-
-
-    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[2]->next,2, tot_qbt,Identity);
-    PRINT_VECTOR(statevector,sv_size);
+void process_qbt(Circuit*, int qbt_ind){  
+}
 */
 
-
-
-
-}
-
-void process_qbt(Circuit*, int qbt_ind){
-    
-}
-
-
-float complex* MX_MAP(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
-
-    float complex *new = (float complex*) calloc(vec_dim, sizeof(float complex));
-
-    for (int i=0;i<mx_dim;i++){
-
-        for (int j=0;j<mx_dim;j++){
-            new[i] += mx[i][j] * vector[j];
-        }
-    }
-
-    return new;
-
-}
-
+/*
 float complex* TS_PD(float complex *vector1, int vec1_dim, float complex *vector2, int vec2_dim){
 
     float complex* new = (float complex*) calloc(vec1_dim * vec2_dim, sizeof(float complex));
 
     for (int i=0; i<vec1_dim;i++){
 
-        for (int j=0; i<vec2_dim; j++){
+        for (int j=0; j<vec2_dim; j++){
 
             new[i*vec2_dim+vec2_dim] = vector1[i] * vector2[j];
 
@@ -631,6 +587,7 @@ float complex* Init_QS(int qbts){
     return a;
 }
 
+*/
 
 
 
