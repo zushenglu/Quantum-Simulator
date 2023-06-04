@@ -7,6 +7,7 @@
 #include "qubit.h"
 #include "gate.h"
 #include "circuit.h"
+#include "convertor.h"
 
 
 /*
@@ -468,8 +469,9 @@ void simulate(Circuit* circuit){
 
     }
 
-    PRINT_VECTOR(statevector,sv_size);
 
+    ResUnit **result = to_prob(statevector,sv_size);
+    PRINT_RESULT(result,sv_size);
 
 /*
    // apply h gate on q0
