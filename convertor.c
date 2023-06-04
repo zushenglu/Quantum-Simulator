@@ -64,7 +64,7 @@ ResUnit** to_prob(float complex* statevector, int sv_len){
 }
 
 void PRINT_RESULT(ResUnit** result, int res_len){
-    printf("Result:\n\tstate\t\tprobability\n");
+    printf("\nResult:\n\tstate\t\tprobability\n");
 
     for (int i=0;i<res_len;i++){
         printf(" %d\t%s\t\t%.4f\t%%\n", i, result[i]->state, result[i]->prob*100);
