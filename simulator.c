@@ -104,7 +104,7 @@ float complex** TS_MPD(float complex ** mx1, float complex ** mx2, int mx1w, int
 }
 
 float complex** TS_MPDL(float complex ** mx1, float complex ** mx2, int mx1w, int mx1h, int mx2w,
-    int mx2h){
+    int mx2h, float complex ** identity){
 
     float complex ** lgm = malloc(sizeof(float complex*)* mx1h*mx2h);
     // printf("%d\n", mx1h*mx2h);
@@ -134,11 +134,15 @@ float complex** TS_MPDL(float complex ** mx1, float complex ** mx2, int mx1w, in
         }
     }
     
-    free(mx1);
-    free(mx2);
+    if (mx1 != identity){
+        // printf("mx1 freed\n");
+        free(mx1);
+    }
+    if (mx2 != identity){
+        // printf("mx2 freed\n");
+        free(mx2);
+    }
     return lgm;
-
-
 }
 
 
@@ -291,7 +295,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
                 lgm0_len += 2;
             }
             else{
-                lgm0 = TS_MPD(lgm0,Cs0,lgm0_len,lgm0_len,2,2);
+                lgm0 = TS_MPDL(lgm0,Cs0,lgm0_len,lgm0_len,2,2,identity);
                 lgm0_len *= 2;
             }
             continue; 
@@ -302,7 +306,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
                 lgm0_len += 2;
             }
             else{
-                lgm0 = TS_MPD(lgm0,identity,lgm0_len,lgm0_len,2,2);
+                lgm0 = TS_MPDL(lgm0,identity,lgm0_len,lgm0_len,2,2,identity);
                 lgm0_len *= 2;
             }
             continue;
@@ -316,7 +320,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
             // PRINT_MX(lgm0, lgm0_len);
             // printf("\n");
             // PRINT_MX(identity,2);
-            lgm0 = TS_MPD(lgm0,identity,lgm0_len,lgm0_len,2,2);
+            lgm0 = TS_MPDL(lgm0,identity,lgm0_len,lgm0_len,2,2,identity);
             lgm0_len *= 2;
         }
         
@@ -334,7 +338,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
                 lgm1_len += 2;
             }
             else{
-                lgm1 = TS_MPD(lgm1,Cs1,lgm1_len,lgm1_len,2,2);
+                lgm1 = TS_MPDL(lgm1,Cs1,lgm1_len,lgm1_len,2,2,identity);
                 lgm1_len *= 2;
             }
             continue;
@@ -345,7 +349,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
                 lgm1_len += 2;
             }
             else{
-                lgm1 = TS_MPD(lgm1,Xmx,lgm1_len,lgm1_len,2,2);
+                lgm1 = TS_MPDL(lgm1,Xmx,lgm1_len,lgm1_len,2,2,identity);
                 lgm1_len *= 2;
             }
             continue;
@@ -356,7 +360,7 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
             lgm1_len += 2;
         }
         else{
-            lgm1 = TS_MPD(lgm1,identity,lgm1_len,lgm1_len,2,2);
+            lgm1 = TS_MPDL(lgm1,identity,lgm1_len,lgm1_len,2,2,identity);
             lgm1_len *= 2;
 
         }
@@ -373,9 +377,91 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
 }
 
 typedef struct struct_gate_queue{
-
 };
 
+// return array with all Operations at given depth
+Operation** OP_BY_DEPTH(Circuit* circuit, int depth){
+
+    int size = circuit->size;
+    Operation** op_arr = malloc(sizeof(Operation*)*size);
+
+    Operation *op;
+    Qubit *qbt;
+    for (int i=0;i<size;i++){  
+        qbt = circuit->Q[i];
+        op = qbt->next;
+
+        if (op == NULL){
+            op_arr[i] = NULL;
+            continue;
+        }
+
+        if (op->depth != depth){
+            op_arr[i] = NULL;
+            continue;
+        }
+
+        op_arr[i] = op;
+    }
+
+    return op_arr;
+
+
+}
+
+/*
+float complex** DEPTH_LGM(Operation ** op_arr, int arr_len, float complex ** identity){
+
+    float complex** lgm = NULL;
+
+    for (int i=arr_len-1; i>=0; i--){
+
+        if (op_arr[i] == NULL){
+            
+            // if (lgm == nlgm = TS_MPD()
+        }
+
+    }
+
+}
+*/
+
+void simulate2(Circuit* circuit){
+
+    int tot_qbt = circuit->size;
+    int sv_size = pow(2,tot_qbt);
+    // printf("%ld\n", sv_size );
+    // printf("%zu\n", sizeof(float complex));
+    // printf("%zu\n", SIZE_MAX);
+    float complex *statevector = calloc(sv_size, sizeof(float complex));
+
+    float complex **Identity = initI()->mx;
+
+    // initialize quantum state
+    statevector[0] = 1; // causing seg fault
+
+
+    int circuit_depth = circuit->depth;
+    Operation **op_arr;
+
+    // printf("circuit depth: %d\n", circuit_depth);
+
+    // iterate by depth
+    for (int d=1; d<=circuit_depth; d++){
+        int i=0; 
+
+        // op_arr = GATE_BY_DEPTH(circuit, d);
+
+        
+
+    }
+
+
+    ResUnit **result = to_prob(statevector,sv_size);
+    PRINT_RESULT(result,sv_size);
+
+
+}
 
 void simulate(Circuit* circuit){
 

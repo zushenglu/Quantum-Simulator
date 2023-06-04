@@ -1,8 +1,5 @@
 
-#include <stdio.h>
-#include <complex.h>
-#include <math.h>
-#include <stdlib.h>
+
 
 // #include "qubit.h"
 // #include "gate.h"
@@ -25,7 +22,9 @@ int main(int argnum, char** arg){
     PauliX(qc,2);
     CX(qc,2,0);
     CX(qc,1,2);
+    
     Hadamard(qc,1);
+
 
 
 
