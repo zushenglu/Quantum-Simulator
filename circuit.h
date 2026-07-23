@@ -10,10 +10,10 @@ typedef struct struct_operation {
     int depth;
     char * name;
     float complex *parameters;
-    int param_num; // number of parameters there is
-    int param_ind; // if multi-qubit, what order is it?
-    int *impacted_qbts; // if multi-qubit, array of qubits involved
-    int impacted_qbts_num; // if multi-qubit, number of qubits involved
+    int param_num;           // Number of gate parameters.
+    int param_ind;           // This qubit's position in a multi-qubit operation.
+    int *impacted_qbts;      // Indices of qubits affected by the operation.
+    int impacted_qbts_num;   // Number of affected qubits.
     Gate *gate;
     struct struct_operation *next;
 } Operation;

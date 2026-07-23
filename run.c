@@ -1,12 +1,7 @@
 
 
 
-// #include "qubit.h"
-// #include "gate.h"
-// #include "circuit.h"
-// #include "simulator.h"
 #include "Q-sim.h"
-// brk, sbrk
 
 int main(int argnum, char** arg){
 

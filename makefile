@@ -1,13 +1,19 @@
 CC = gcc
-CFLAGS = -Wall -Wextra 
+CFLAGS = -Wall -Wextra
+LDLIBS = -lm
 
 SRCS = gate.c circuit.c qubit.c simulator.c run.c convertor.c
-OBJS = $(SRCS:.c=.o) 
+OBJS = $(SRCS:.c=.o)
 
-all: myproj
+.PHONY: all clean debug run
+
+all: run
 
 myproj: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
+
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDLIBS)
+
+run: myproj
 	./myproj
 
 %.o: %.c

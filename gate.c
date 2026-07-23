@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "circuit.h" // for rz debug only, remove once fixed
+#include "circuit.h"
 
 void PRINT_GATE(Gate *gate, int dimension){
 
@@ -33,14 +33,11 @@ Gate* RZ_mx(float input){
 
 
     mx[0][0] = cexp(-I/2*input);
-    // printf()
     mx[0][1] = 0;
     mx[1][0] = 0;
     mx[1][1] = cexp(I/2*input);
 
     g->mx = mx;
-    // PRINT_MX(mx,2);
-
     return g;
 }
 
@@ -107,29 +104,6 @@ Gate* initH(){
     Hada->mx[1][1] = -num;
     return Hada;
 }
-/*
-// not sure
-Gate* TO_UNITARY(Gate * gate, int dimension){
-    // a matrix is unitary if a matrix multiplication with its transposed conjugate == I, AKA Hermition
-    
-
-    return gate;
-}
-
-// not sure
-Gate* CREATE_GATE(float complex **mx, int dimension){
-
-    Gate *temp = malloc(sizeof(Gate));
-    temp->dimension=dimension;
-    temp->mx = mx;
-
-    temp = TO_UNITARY(temp, dimension);
-
-    return temp; 
-}
-
-*/
-
 Gate* initI(){
     Gate *IdentGate = malloc(sizeof(Gate));
     IdentGate->dimension = 2;
