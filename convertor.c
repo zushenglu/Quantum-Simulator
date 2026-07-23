@@ -7,7 +7,7 @@
 
 char* toBin(int i, int str_len){
 
-    char * bin = malloc(str_len*sizeof(char));
+    char *bin = malloc((str_len + 1) * sizeof(char));
     
     int r = i;
     for (int j=0; j<str_len;j++){
@@ -20,9 +20,8 @@ char* toBin(int i, int str_len){
         else{
             bin[j] = '0';
         }
-        // bin[j]
     }
-    // printf("%s\n",bin);
+    bin[str_len] = '\0';
 
     return bin;
 }
