@@ -10,52 +10,8 @@
 #include "convertor.h"
 
 
-/*
-    general idea:
-        read the circuit by circuit depth
-        apply gate to each qubit
-        pass resulting circuit onto measurement 
-
-    how to deal with multi-qubit gate:
-        since circuit have placeholder gates, all qubits affected by the
-        gate will be in the same depth. 
-        
-        In this case we check the param_id and take tensor product
-            should be a vector of [2xn] x 1 where n = num of qubits
-
-        then map the vector with given gate to get final state vector V
-
-        (need more research on the topic and proof it)
-        resulting vector should give amplitude for each qubit in the form
-        (assuming i start on 1):
-            param_qubit[i].a = V[(n/(2i))-1] 
-            param_qubit[i].b = V[(n/(2i))] 
-
-        
-    
-    check this site:
-        https://learn.microsoft.com/en-us/azure/quantum/concepts-multiple-qubits
-
-
-*/
-
-/*
-    Damn ngl i think its kinda fucked lmao ...
-
-    path1: read them all together, create a big array for all states and modifi them by steps
-        requires restructre the simulator
-        requires some math for details of implementaion
-
-    path2: keep the same structure, but when entanglement happens, make it dependent while keep
-    the original state. modify it when state ended
-        requires extra process for entanglement and keeping the state
-        requires some tha for details
-
-    path3: Stop acting like you know the way like you know the rules! 
-        there are no rules man we are lost :(  
-    
-
-*/
+/* The simulator builds full-system gate matrices from tensor products and
+ * applies them to a complex state vector one circuit depth at a time. */
 
 void PRINT_VECTOR(float complex *vector, int size){
 
@@ -249,7 +205,7 @@ float complex ** MX_ADD(float complex ** mx1, float complex ** mx2, int mx_size)
 
 }
 
-// apply controlled gate, currently only 1-1 control supported
+/* Apply a single-control, single-target controlled operation. */
 float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op, int qbt_ind, int tot_qbt, float complex** identity){
 
     // PRINT_VECTOR(cur_state,sv_len);
@@ -372,14 +328,13 @@ float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op,
     // PRINT_MX(lgm,lgm0_len);
 
     cur_state = MX_MAP(cur_state,sv_len,lgm, lgm0_len);
-    // printf("what?\n");
     return cur_state;
 }
 
 typedef struct struct_gate_queue{
 };
 
-// return array with all Operations at given depth
+/* Return the operations scheduled at a given circuit depth. */
 Operation** OP_BY_DEPTH(Circuit* circuit, int depth){
 
     int size = circuit->size;
@@ -409,23 +364,6 @@ Operation** OP_BY_DEPTH(Circuit* circuit, int depth){
 
 }
 
-/*
-float complex** DEPTH_LGM(Operation ** op_arr, int arr_len, float complex ** identity){
-
-    float complex** lgm = NULL;
-
-    for (int i=arr_len-1; i>=0; i--){
-
-        if (op_arr[i] == NULL){
-            
-            // if (lgm == nlgm = TS_MPD()
-        }
-
-    }
-
-}
-*/
-
 void simulate2(Circuit* circuit){
 
     int tot_qbt = circuit->size;
@@ -437,8 +375,8 @@ void simulate2(Circuit* circuit){
 
     float complex **Identity = initI()->mx;
 
-    // initialize quantum state
-    statevector[0] = 1; // causing seg fault
+    /* Initialize the state vector to |0...0>. */
+    statevector[0] = 1;
 
 
     int circuit_depth = circuit->depth;
@@ -475,8 +413,8 @@ void simulate(Circuit* circuit){
 
     float complex **Identity = initI()->mx;
 
-    // initialize quantum state
-    statevector[0] = 1; // causing seg fault
+    /* Initialize the state vector to |0...0>. */
+    statevector[0] = 1;
 
 
     int circuit_depth = circuit->depth;
@@ -559,28 +497,6 @@ void simulate(Circuit* circuit){
     ResUnit **result = to_prob(statevector,sv_size);
     PRINT_RESULT(result,sv_size);
 
-/*
-   // apply h gate on q0
-    printf("1\n");
-
-    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[0]->next,0,tot_qbt,Identity);
-    // PRINT_VECTOR(statevector,sv_size);
-    printf("2\n");
-
-    circuit->Q[0]->next = circuit->Q[0]->next->next;
- 
-    // perform cx gate
-    statevector = APPLY_C_gate(statevector,sv_size,circuit->Q[0]->next,0,tot_qbt,Identity);
-    PRINT_VECTOR(statevector,sv_size);
-
-
-    statevector = APPLY_qbt_gate(statevector, sv_size, circuit->Q[2]->next,2, tot_qbt,Identity);
-    PRINT_VECTOR(statevector,sv_size);
-*/
-
-
-
-
 }
 
 void process_qbt(Circuit*, int qbt_ind){
@@ -630,20 +546,4 @@ float complex* Init_QS(int qbts){
     float complex* a = calloc(2*qbts, sizeof(float complex));
     return a;
 }
-
-
-
-
-
-/*
-
-a = [1/sqrt2 1/sqrt2] b = [1/sqrt2 1/sqrt2]
-a ox b = [ 1/2 1/2 1/2 1/2]
-
-[1,0,0,0     [1/2    [1/2   [00           [1/4
- 0,1,0,0  ox  1/2  =  1/2 =  01   => pr =  1/4
- 0,0,0,1      1/2     1/2    10            1/4
- 0,0,1,0]     1/2]    1/2    11]           1/4]
-
-*/
 

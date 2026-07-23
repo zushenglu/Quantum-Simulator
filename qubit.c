@@ -17,10 +17,6 @@ Qubit* INIT_QUBIT(int index){
     return qubit;
 }
 
-// void PRINT_COMPLEX(float complex input){ 
-//     printf("%.1f%+.1fi ",  creal(input), cimag(input));
-//     return;
-// }
 
 void PRINT_QUBIT_STAT(Qubit* qubit){
     

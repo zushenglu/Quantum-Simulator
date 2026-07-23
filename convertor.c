@@ -5,18 +5,6 @@
 
 #include "convertor.h"
 
-// typedef struct struct_convertor {
-
-//     int char_len;
-//     enum unit {prob, state};
-//     union union_result{
-//         float prob;
-//         char* state;
-//     };
-// } Conv_Unit;
-
-
-
 char* toBin(int i, int str_len){
 
     char * bin = malloc(str_len*sizeof(char));
