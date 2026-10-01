@@ -232,6 +232,7 @@ void RZ(Circuit *qc, int target_qbt, float complex rotation){
 
     float complex *param = malloc(sizeof(float complex));
     if (param == NULL){
+        /* Leave the circuit unchanged when the parameter cannot be stored. */
         fprintf(stderr, "RZ: failed to allocate rotation parameter\n");
         return;
     }
