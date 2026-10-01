@@ -5,4 +5,5 @@ backup
 *.o
 scout
 myproj
+tests/circuit_lifecycle
 a.c

@@ -37,6 +37,16 @@ Build and run the example circuit:
 make
 ```
 
+Run the circuit ownership test:
+
+```bash
+make test
+```
+
+Programs that create a circuit with `INIT_CIRCUIT()` should call
+`FREE_CIRCUIT()` after the last use, including after `simulate()`. This
+releases its qubits, operations, gate matrices, and stored parameters.
+
 Remove generated objects and the executable:
 
 ```bash

@@ -9,6 +9,7 @@ typedef struct struct_qubit {
     int depth;
     float complex x;
     float complex y;
+    struct struct_operation *head;  // Ownership list; simulation advances next.
     struct struct_operation *next;
     struct struct_operation *last;
 } Qubit; 

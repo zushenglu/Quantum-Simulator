@@ -124,20 +124,74 @@ void PRINT_CIRCUIT(Circuit* qc, int size){
 
 Circuit* INIT_CIRCUIT(int size){
 
-    Circuit *qc = malloc(sizeof(Circuit));
+    if (size <= 0){
+        return NULL;
+    }
+    Circuit *qc = calloc(1, sizeof(Circuit));
+    if (qc == NULL){
+        return NULL;
+    }
 
     /* Initialize the circuit and its qubits. */
-    qc->Q = malloc(sizeof(Qubit)*size);
+    qc->Q = calloc((size_t)size, sizeof(Qubit*));
+    if (qc->Q == NULL){
+        free(qc);
+        return NULL;
+    }
+    qc->size = size;
     qc->depth = 1;
 
     for (int i=0;i<size;i++){
 
         Qubit* qubit = INIT_QUBIT(i);
+        if (qubit == NULL){
+            FREE_CIRCUIT(qc);
+            return NULL;
+        }
         qc->Q[i] = qubit;
     }
-    qc->size = size;
 
     return qc;
+}
+
+/* Operations own their parameters and gate matrices. Multi-qubit operations
+ * share those allocations, so only the first copy releases them. */
+void FREE_CIRCUIT(Circuit *circuit){
+    if (circuit == NULL){
+        return;
+    }
+    for (int i = 0; i < circuit->size; i++){
+        Qubit *qubit = circuit->Q[i];
+        if (qubit == NULL){
+            continue;
+        }
+        Operation *op = qubit->head;
+        while (op != NULL){
+            Operation *next = op->next;
+            /* -1 is single-qubit; 0 is the owner among shared copies. */
+            if (op->param_ind == -1 || op->param_ind == 0){
+                free(op->parameters);
+                if (op->gate != NULL){
+                    if (op->gate->mx != NULL){
+                        for (int row = 0; row < op->gate->dimension; row++){
+                            free(op->gate->mx[row]);
+                        }
+                        free(op->gate->mx);
+                    }
+                    free(op->gate);
+                }
+                if (op->impacted_qbts_num > 1){
+                    free(op->impacted_qbts);
+                }
+            }
+            free(op);
+            op = next;
+        }
+        free(qubit);
+    }
+    free(circuit->Q);
+    free(circuit->states);
+    free(circuit);
 }
 
 /* Add a single-qubit operation at the next depth for qbt_ind. */
@@ -152,19 +206,24 @@ void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *params, int para
     op->name = name;
     op->gate = gate;
     op->next = NULL;
-    op->impacted_qbts = &qbt_ind;
+    op->single_qbt_index = qbt_ind;
+    op->impacted_qbts = &op->single_qbt_index;
     op->impacted_qbts_num=1;
     op->param_ind=-1;
     op->parameters = params;
     op->param_num = param_num;
 
-    if (qubit->next == NULL){
+    if (qubit->last == NULL){
+        qubit->head = op;
         qubit->next = op;
         qubit->last = op;
     }
     else{
         qubit->last->next = op;
         qubit->last = op;
+        if (qubit->next == NULL){
+            qubit->next = op;
+        }
     }
 
     if (qubit->depth > c->depth){
@@ -199,13 +258,17 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
         int index = qbt_ind[i];
         Qubit *qubit = c->Q[index];
         
-        if (qubit->next == NULL){
+        if (qubit->last == NULL){
+            qubit->head = op;
             qubit->next = op;
             qubit->last = op;
         }
         else{
             qubit->last->next = op;
             qubit->last = op;
+            if (qubit->next == NULL){
+                qubit->next = op;
+            }
         }
 
         qubit->depth = max_depth;
@@ -231,6 +294,11 @@ void CX(Circuit *qc, int control_qbt, int target_qbt){
 void RZ(Circuit *qc, int target_qbt, float complex rotation){
 
     float complex *param = malloc(sizeof(float complex));
+    if (param == NULL){
+        /* Leave the circuit unchanged when the parameter cannot be stored. */
+        fprintf(stderr, "RZ: failed to allocate rotation parameter\n");
+        return;
+    }
     *param = rotation;
     Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
 }

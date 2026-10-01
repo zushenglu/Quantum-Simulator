@@ -10,6 +10,10 @@ int main(int argnum, char** arg){
     int SIZE = 3;
 
     Circuit *qc = INIT_CIRCUIT(SIZE);
+    if (qc == NULL){
+        fprintf(stderr, "Failed to initialize circuit\n");
+        return EXIT_FAILURE;
+    }
     Hadamard(qc,0);
     CX(qc,0,1);
     RZ(qc,2,M_PI/4);
@@ -25,6 +29,7 @@ int main(int argnum, char** arg){
 
     PRINT_CIRCUIT(qc,SIZE);
     simulate(qc);
+    FREE_CIRCUIT(qc);
 
     return 0;
 }

@@ -75,7 +75,7 @@ Gate* initCX(){
 Gate* initPX(){
     Gate *PauliX = malloc(sizeof(Gate));
     PauliX->dimension=2;
-    PauliX->param_id=NULL;
+    PauliX->param_id=-1;
     PauliX->mx = malloc(sizeof(float complex)*PauliX->dimension);
     for (int i=0;i<PauliX->dimension;i++){
         float complex *row = malloc(sizeof(float complex)*PauliX->dimension);
@@ -91,7 +91,7 @@ Gate* initPX(){
 Gate* initH(){
     Gate *Hada = malloc(sizeof(Gate));
     Hada->dimension=2;
-    Hada->param_id=NULL;
+    Hada->param_id=-1;
     Hada->mx = malloc(sizeof(float complex)*Hada->dimension);
     for (int i=0;i<Hada->dimension;i++){
         float complex *row = malloc(sizeof(float complex)*Hada->dimension);
@@ -107,7 +107,7 @@ Gate* initH(){
 Gate* initI(){
     Gate *IdentGate = malloc(sizeof(Gate));
     IdentGate->dimension = 2;
-    IdentGate->param_id = NULL;
+    IdentGate->param_id = -1;
     float complex ** Ident = malloc(sizeof(float complex*) * 2);
     Ident[0] = malloc(sizeof(float complex) * 2);
     Ident[1] = malloc(sizeof(float complex) * 2);
