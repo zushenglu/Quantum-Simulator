@@ -187,7 +187,7 @@ float complex ** ExtractSqrtMx(float complex** mx,int start_x, int start_y){
     tbtmx[1][0] = mx[start_y+1][start_x];
     tbtmx[1][1] = mx[start_y+1][start_x+1];
 
-    free(mx);
+    /* The gate retains ownership of its matrix until FREE_CIRCUIT(). */
     return tbtmx;
 }
 
@@ -546,4 +546,3 @@ float complex* Init_QS(int qbts){
     float complex* a = calloc(2*qbts, sizeof(float complex));
     return a;
 }
-
