@@ -231,6 +231,11 @@ void CX(Circuit *qc, int control_qbt, int target_qbt){
 void RZ(Circuit *qc, int target_qbt, float complex rotation){
 
     float complex *param = malloc(sizeof(float complex));
+    if (param == NULL){
+        /* Leave the circuit unchanged when the parameter cannot be stored. */
+        fprintf(stderr, "RZ: failed to allocate rotation parameter\n");
+        return;
+    }
     *param = rotation;
     Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
 }
