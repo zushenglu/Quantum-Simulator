@@ -10,6 +10,7 @@ typedef struct struct_gate {
 } Gate; 
 
 void PRINT_GATE(Gate *gate,int dimension);
+void FREE_GATE(Gate *gate);
 
 Gate* RZ_mx(float input);
 

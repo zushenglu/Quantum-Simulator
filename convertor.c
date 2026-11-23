@@ -38,7 +38,6 @@ ResUnit** to_prob(float complex* statevector, int sv_len){
     int str_len = (int) (log(sv_len)/log(2));
     ResUnit ** result = malloc(sizeof(ResUnit*) * sv_len);
 
-    char *bin;
     for (int i=0;i<sv_len;i++){
         ResUnit* info = malloc(sizeof(ResUnit));
         info->prob = toProb(statevector[i]);
@@ -57,3 +56,11 @@ void PRINT_RESULT(ResUnit** result, int res_len){
         printf(" %d\t%s\t\t%.4f\t%%\n", i, result[i]->state, result[i]->prob*100);
     }
 } 
+
+void FREE_RESULT(ResUnit **result, int res_len){
+    for (int i = 0; i < res_len; i++){
+        free(result[i]->state);
+        free(result[i]);
+    }
+    free(result);
+}

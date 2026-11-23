@@ -10,5 +10,6 @@ typedef struct struct_result_unit {
 
 ResUnit** to_prob(float complex* arr, int sv_len);
 void PRINT_RESULT(ResUnit** result, int res_len);
+void FREE_RESULT(ResUnit **result, int res_len);
 
 #endif

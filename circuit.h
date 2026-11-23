@@ -14,8 +14,9 @@ typedef struct struct_operation {
     int param_ind;           // This qubit's position in a multi-qubit operation.
     int *impacted_qbts;      // Indices of qubits affected by the operation.
     int impacted_qbts_num;   // Number of affected qubits.
-    Gate *gate;
+    struct struct_gate *gate;
     struct struct_operation *next;
+    int owns_gate_data;
 } Operation;
 
 typedef struct struct_circuit {
@@ -34,6 +35,8 @@ void PRINT_QUBIT_OP(Circuit* qc, int qubit);
 void PRINT_CIRCUIT(Circuit* qc, int size);
 
 Circuit* INIT_CIRCUIT(int size);
+void FREE_CIRCUIT(Circuit *circuit);
+/* These insertion functions borrow gate, params, name, and any qubit array. */
 void Add_OP(struct struct_gate * gate, int qbt_ind, Circuit *c, float complex *params, int param_num, char* name);
 void Add_OPM(struct struct_gate * gate, int *qbt_ind, int input_num, Circuit *c, float complex *params, int param_num, char* name);
 

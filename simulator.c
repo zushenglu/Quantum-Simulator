@@ -24,311 +24,74 @@ void PRINT_VECTOR(float complex *vector, int size){
 
 }
 
-float complex** TS_MPD(float complex ** mx1, float complex ** mx2, int mx1w, int mx1h, int mx2w,
-    int mx2h){
-
-    float complex ** lgm = malloc(sizeof(float complex*)* mx1h*mx2h);
-    // printf("%d\n", mx1h*mx2h);
-    for (int mx1y=0; mx1y<mx1h; mx1y++){ 
-        
-        // init for row 1 tp
-        for (int i=0; i<(mx2h);i++){
-            lgm[mx2h*mx1y+i] = malloc(sizeof(float complex)* mx1w*mx2w);
-            // printf("%d %d\n", mx2h*mx1y+i, mx1w*mx2w);
-        }
-
-        for (int mx1x=0; mx1x<mx1w; mx1x++){
-
-            // for every item in mx 1, perform scalar trans on mx2
-            // printf("%d %d\n", mx1y, mx1x);
-            float complex scalar = mx1[mx1y][mx1x];
-
-            for (int mx2x=0; mx2x<mx2w; mx2x++){
-                for (int mx2y=0; mx2y<mx2h; mx2y++){
-                    // printf("%d %d\n", mx1y*mx2h+mx2y, mx1x*mx2w+mx2x);
-                    lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = scalar * mx2[mx2y][mx2x];
-                    // lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = 5;
-
-                }
-            }
-            
-        }
+static void free_matrix(float complex **matrix, int size){
+    for (int row = 0; row < size; row++){
+        free(matrix[row]);
     }
-    return lgm;
-
-
+    free(matrix);
 }
 
-float complex** TS_MPDL(float complex ** mx1, float complex ** mx2, int mx1w, int mx1h, int mx2w,
-    int mx2h, float complex ** identity){
-
-    float complex ** lgm = malloc(sizeof(float complex*)* mx1h*mx2h);
-    // printf("%d\n", mx1h*mx2h);
-    for (int mx1y=0; mx1y<mx1h; mx1y++){ 
-        
-        // init for row 1 tp
-        for (int i=0; i<(mx2h);i++){
-            lgm[mx2h*mx1y+i] = malloc(sizeof(float complex)* mx1w*mx2w);
-            // printf("%d %d\n", mx2h*mx1y+i, mx1w*mx2w);
-        }
-
-        for (int mx1x=0; mx1x<mx1w; mx1x++){
-
-            // for every item in mx 1, perform scalar trans on mx2
-            // printf("%d %d\n", mx1y, mx1x);
-            float complex scalar = mx1[mx1y][mx1x];
-
-            for (int mx2x=0; mx2x<mx2w; mx2x++){
-                for (int mx2y=0; mx2y<mx2h; mx2y++){
-                    // printf("%d %d\n", mx1y*mx2h+mx2y, mx1x*mx2w+mx2x);
-                    lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = scalar * mx2[mx2y][mx2x];
-                    // lgm[mx1y*mx2h+mx2y][mx1x*mx2w+mx2x] = 5;
-
-                }
-            }
-            
+/* Append one 2x2 factor to a square tensor product. */
+static float complex **tensor_product(float complex *const *matrix, int size,
+                                      float complex *const *factor){
+    float complex **product = malloc(2 * size * sizeof(*product));
+    for (int row = 0; row < 2 * size; row++){
+        product[row] = malloc(2 * size * sizeof(*product[row]));
+        for (int col = 0; col < 2 * size; col++){
+            product[row][col] = matrix[row / 2][col / 2] * factor[row % 2][col % 2];
         }
     }
-    
-    if (mx1 != identity){
-        // printf("mx1 freed\n");
-        free(mx1);
-    }
-    if (mx2 != identity){
-        // printf("mx2 freed\n");
-        free(mx2);
-    }
-    return lgm;
+    return product;
 }
 
+/* Qubit 0 is the low bit, so append its factor last. */
+static float complex **build_gate_matrix(int qubits, float complex *const *identity,
+                                         int first_index, float complex *const *first,
+                                         int second_index, float complex *const *second){
+    float complex unit = 1;
+    float complex *unit_row = &unit;
+    float complex **matrix = &unit_row;
+    int size = 1;
 
-float complex* MX_MAPL(float complex * vector, int vec_dim, float complex ** mx, int mx_dim){
-
-    float complex *new = (float complex*) calloc(vec_dim, sizeof(float complex));
-
-    for (int i=0;i<mx_dim;i++){
-
-        for (int j=0;j<mx_dim;j++){
-            // PRINT_COMPLEX(vector[j]);
-            // printf(" * ");
-            // PRINT_COMPLEX(mx[i][j]);
-            // printf("\n");
-            new[i] += mx[i][j] * vector[j];
+    for (int index = qubits - 1; index >= 0; index--){
+        float complex *const *factor = identity;
+        if (index == first_index){
+            factor = first;
         }
+        else if (index == second_index){
+            factor = second;
+        }
+
+        float complex **product = tensor_product(matrix, size, factor);
+        if (size > 1){
+            free_matrix(matrix, size);
+        }
+        matrix = product;
+        size *= 2;
     }
-
-    free(vector);
-    free(mx);
-    return new;
-
-    // printf("new state: ");
-    // PRINT_COMPLEX(vector[0]);
-    // PRINT_COMPLEX(vector[1]);
-    // printf("\n");
-
-    // return new;
-
+    return matrix;
 }
 
-// apply given gate, return statevector after complete the transformation
-float complex* APPLY_qbt_gate(float complex* cur_state, int sv_len, Operation* op, int qbt_ind, int tot_qbt, float complex** identity){
+static float complex **build_controlled_matrix(const Operation *op, int qubits,
+                                               int size, float complex *const *identity){
+    int control = op->impacted_qbts[0];
+    int target = op->impacted_qbts[1];
+    float complex zero_data[2][2] = {{1, 0}, {0, 0}};
+    float complex one_data[2][2] = {{0, 0}, {0, 1}};
+    float complex *zero[] = {zero_data[0], zero_data[1]};
+    float complex *one[] = {one_data[0], one_data[1]};
+    /* Borrow the controlled gate's lower-right block for the control=1 term. */
+    float complex *target_gate[] = {op->gate->mx[2] + 2, op->gate->mx[3] + 2};
 
-    float complex** gmx = op->gate->mx;
-
-    if (op == NULL){
-        return cur_state;
-    }
-
-    // PRINT_VECTOR(cur_state, sv_len);
-    // PRINT_MX(identity,2);
-    float complex** lgm;
-    if (qbt_ind == tot_qbt-1){ // multiply special first
-        lgm = TS_MPD(gmx,identity,2,2,2,2);
-    }
-    else {
-        if (qbt_ind == tot_qbt-2){ // multiply special second
-            lgm = TS_MPD(identity,gmx,2,2,2,2);
-        }
-        else{
-            lgm = TS_MPD(identity, identity,2,2,2,2);
+    float complex **matrix = build_gate_matrix(qubits, identity, control, zero, -1, NULL);
+    float complex **active = build_gate_matrix(qubits, identity, control, one, target, target_gate);
+    for (int row = 0; row < size; row++){
+        for (int col = 0; col < size; col++){
+            matrix[row][col] += active[row][col];
         }
     }
-    // PRINT_MX(lgm,4);
-    int lgm_size = 4;
-    for (int i=tot_qbt-3;i>=0;i--){
-        
-        if (i == qbt_ind){
-            lgm = TS_MPD(lgm,gmx,lgm_size,lgm_size,2,2);
-        }
-        else{
-            lgm = TS_MPD(lgm,identity,lgm_size,lgm_size,2,2);
-        }
-
-        lgm_size *= 2;
-    }
-
-    // PRINT_MX(lgm, lgm_size);
-    // printf("\n");
-
-    cur_state = MX_MAPL(cur_state,pow(2,tot_qbt),lgm,pow(2,tot_qbt));
-
-    return cur_state;
-}
-
-// extract a 2x2 square matrix at start_ind
-float complex ** ExtractSqrtMx(float complex** mx,int start_x, int start_y){
-
-    float complex ** tbtmx = malloc(sizeof(float complex*)*2);
-    tbtmx[0] = calloc(2, sizeof(float complex));
-    tbtmx[1] = calloc(2, sizeof(float complex));
-
-    tbtmx[0][0] = mx[start_y][start_x];
-    tbtmx[0][1] = mx[start_y][start_x+1];
-    tbtmx[1][0] = mx[start_y+1][start_x];
-    tbtmx[1][1] = mx[start_y+1][start_x+1];
-
-    free(mx);
-    return tbtmx;
-}
-
-float complex ** MX_ADD(float complex ** mx1, float complex ** mx2, int mx_size){
-
-    for (int y=0; y<mx_size;y++){
-
-        for (int x=0; x<mx_size;x++){
-            mx1[y][x] = mx1[y][x] + mx2[y][x];
-        }
-    }
-
-    free(mx2);
-    return mx1;
-
-}
-
-/* Apply a single-control, single-target controlled operation. */
-float complex* APPLY_C_gate(float complex* cur_state, int sv_len, Operation* op, int qbt_ind, int tot_qbt, float complex** identity){
-
-    // PRINT_VECTOR(cur_state,sv_len);
-    int impacted_qbt = op->impacted_qbts_num;
-    int c_ind = op->impacted_qbts[0];
-    int x_ind = op->impacted_qbts[1];
-
-    float complex ** Xmx = ExtractSqrtMx(op->gate->mx, 2,2);
-
-    // PRINT_MX(Xmx, 2);
-
-    float complex ** Cs1 = malloc(sizeof(float complex * )*2);
-    Cs1[0] = calloc(2,sizeof(float complex));
-    Cs1[1] = calloc(2,sizeof(float complex));
-    Cs1[1][1] = 1;
-    float complex ** Cs0 = malloc(sizeof(float complex *)*2);
-    Cs0[0] = calloc(2,sizeof(float complex));
-    Cs0[1] = calloc(2,sizeof(float complex));
-    Cs0[0][0] = 1;
-    // PRINT_MX(Cs1, 2);
-    // PRINT_MX(Cs0, 2);
-
-
-    // printf("%d %d\n", c_ind, x_ind);
-
-    // with n qubits, wheres n-1 tensor product
-    // CX 3->1 with 5 qbt = I I I I [1,0,0,0] I + I X I I [0,0,0,1] I
-    // with n qubits control
-    float complex ** lgm0 = NULL;
-    int lgm0_len = 0;
-    float complex ** lgm1 = NULL;
-    int lgm1_len = 0;
-    
-    // // get cont of |0><0|
-    for (int i=tot_qbt-1; i>=0; i--){
-        // printf("%d\n",i+1);
-
-        // PRINT_MX(lgm0,lgm0_len);
-        // printf("\n");
-        if (i == c_ind){
-            if (lgm0 == NULL){
-                lgm0 = Cs0;
-                lgm0_len += 2;
-            }
-            else{
-                lgm0 = TS_MPDL(lgm0,Cs0,lgm0_len,lgm0_len,2,2,identity);
-                lgm0_len *= 2;
-            }
-            continue; 
-        }
-        if (i == x_ind) {
-            if (lgm0 == NULL){
-                lgm0 = identity;
-                lgm0_len += 2;
-            }
-            else{
-                lgm0 = TS_MPDL(lgm0,identity,lgm0_len,lgm0_len,2,2,identity);
-                lgm0_len *= 2;
-            }
-            continue;
-        }
-
-        if (lgm0 == NULL){
-            lgm0 = identity;
-            lgm0_len += 2;
-        }
-        else{
-            // PRINT_MX(lgm0, lgm0_len);
-            // printf("\n");
-            // PRINT_MX(identity,2);
-            lgm0 = TS_MPDL(lgm0,identity,lgm0_len,lgm0_len,2,2,identity);
-            lgm0_len *= 2;
-        }
-        
-        // PRINT_MX(lgm0, lgm0_len);
-    }
-
-    // PRINT_MX(lgm0,lgm0_len);
-    
-    // // get cont of |1><1|
-    for (int i=tot_qbt-1; i>=0; i--){
-
-        if (i == c_ind){
-            if (lgm1 == NULL){
-                lgm1 = Cs1;
-                lgm1_len += 2;
-            }
-            else{
-                lgm1 = TS_MPDL(lgm1,Cs1,lgm1_len,lgm1_len,2,2,identity);
-                lgm1_len *= 2;
-            }
-            continue;
-        }
-        if (i == x_ind) {
-            if (lgm1 == NULL){
-                lgm1 = Xmx;
-                lgm1_len += 2;
-            }
-            else{
-                lgm1 = TS_MPDL(lgm1,Xmx,lgm1_len,lgm1_len,2,2,identity);
-                lgm1_len *= 2;
-            }
-            continue;
-        }
-
-        if (lgm1 == NULL){
-            lgm1 = identity;
-            lgm1_len += 2;
-        }
-        else{
-            lgm1 = TS_MPDL(lgm1,identity,lgm1_len,lgm1_len,2,2,identity);
-            lgm1_len *= 2;
-
-        }
-    }
-
-    // PRINT_MX(lgm1, lgm1_len);
-    float complex ** lgm = MX_ADD(lgm0,lgm1, lgm1_len);
-    // printf("\n");
-    // PRINT_MX(lgm,lgm0_len);
-
-    cur_state = MX_MAP(cur_state,sv_len,lgm, lgm0_len);
-    return cur_state;
+    free_matrix(active, size);
+    return matrix;
 }
 
 typedef struct struct_gate_queue{
@@ -402,101 +165,50 @@ void simulate2(Circuit* circuit){
 }
 
 void simulate(Circuit* circuit){
-
-
-    int tot_qbt = circuit->size;
-    int sv_size = pow(2,tot_qbt);
-    // printf("%ld\n", sv_size );
-    // printf("%zu\n", sizeof(float complex));
-    // printf("%zu\n", SIZE_MAX);
-    float complex *statevector = calloc(sv_size, sizeof(float complex));
-
-    float complex **Identity = initI()->mx;
-
-    /* Initialize the state vector to |0...0>. */
+    int qubits = circuit->size;
+    int size = pow(2, qubits);
+    float complex *statevector = calloc(size, sizeof(*statevector));
     statevector[0] = 1;
 
-
-    int circuit_depth = circuit->depth;
-    Operation *op;
-
-    // printf("circuit depth: %d\n", circuit_depth);
-
-    // iterate by depth
-    for (int d=1; d<=circuit_depth; d++){
-
-        // printf("depth %d\n", d);
-        // PRINT_OP_INFO(circuit->Q[0]->next);
-        // PRINT_OP_INFO(circuit->Q[1]->next);
-        // PRINT_OP_INFO(circuit->Q[2]->next);
-        // loop over circuit
-        int i=0; 
-        while (i < tot_qbt){
-
-            // printf("%d\n", i);
-            // printf("",op)
-            Qubit *qbt = circuit->Q[i];
-            op = qbt->next;
-            // PRINT_OP_INFO(op);
-
-            if (op == NULL){
-                // printf("depth: %d ind: %d op = null\n", d, i);
-                i+=1;
-                continue;
-            }
-            if (op->depth != d){
-                // printf("depth: %d ind: %d op->depth: %d\n", d, i, op->depth);
-                i+=1;
-                continue;
-            }
-            // printf("depth: %d ind: %d\n", d, i);
-            
-            int impacted_qbt = op->impacted_qbts_num;
-
-            if (impacted_qbt > 1){
-                // printf("\t apply control gate\n");
-                statevector = APPLY_C_gate(statevector,sv_size,op,i,tot_qbt,Identity);
-                // printf("impacted: %d\n", impacted_qbt);
-                i+= 1; 
-                for (int j=0;j<op->impacted_qbts_num;j++){
-                    int temp_index = op->impacted_qbts[j];
-                    // printf("change index: %d\n", temp_index);
-                    Qubit *temp_qbt = circuit->Q[temp_index];
-                    temp_qbt->next = temp_qbt->next->next;
-                }
-
-            }
-            else{
-                // printf("\t apply single gate\n");
-                statevector = APPLY_qbt_gate(statevector,sv_size,op,i,tot_qbt,Identity);
-                
-                qbt->next = op->next;
-                i++;
-
-
-                // if (op->next == NULL){
-                //     circuit->Q[i]->next = NULL;
-                // }
-                // else{
-                //     circuit->Q[i]->next = circuit->Q[i]->next->next;
-                // }
-
-                // PRINT_OP_INFO(op);
-                // PRINT_QUBIT_OP(circuit,i);
-                // circuit->Q[i]->next = op->next;
-                // int ana = op->next == NULL;
-                // printf("\t%s\n",op->next == NULL);
-
-            }
-
-        }
-
+    Gate *identity = initI();
+    const Operation **cursor = malloc(qubits * sizeof(*cursor));
+    for (int i = 0; i < qubits; i++){
+        cursor[i] = circuit->Q[i]->next;
     }
 
+    for (int depth = 1; depth <= circuit->depth; depth++){
+        for (int i = 0; i < qubits; i++){
+            const Operation *op = cursor[i];
+            if (op == NULL || op->depth != depth){
+                continue;
+            }
 
-    ResUnit **result = to_prob(statevector,sv_size);
-    PRINT_RESULT(result,sv_size);
+            float complex **matrix;
+            if (op->impacted_qbts_num > 1){
+                matrix = build_controlled_matrix(op, qubits, size, identity->mx);
+                for (int j = 0; j < op->impacted_qbts_num; j++){
+                    int index = op->impacted_qbts[j];
+                    cursor[index] = cursor[index]->next;
+                }
+            }
+            else{
+                matrix = build_gate_matrix(qubits, identity->mx, i, op->gate->mx, -1, NULL);
+                cursor[i] = op->next;
+            }
 
+            float complex *next_state = MX_MAP(statevector, size, matrix, size);
+            free_matrix(matrix, size);
+            free(statevector);
+            statevector = next_state;
+        }
+    }
+
+    free(cursor);
+    FREE_GATE(identity);
+    ResUnit **result = to_prob(statevector, size);
+    PRINT_RESULT(result, size);
+    FREE_RESULT(result, size);
+    free(statevector);
 }
 
 void process_qbt(Circuit*, int qbt_ind){

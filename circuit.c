@@ -127,7 +127,8 @@ Circuit* INIT_CIRCUIT(int size){
     Circuit *qc = malloc(sizeof(Circuit));
 
     /* Initialize the circuit and its qubits. */
-    qc->Q = malloc(sizeof(Qubit)*size);
+    qc->Q = malloc(sizeof(*qc->Q)*size);
+    qc->states = NULL;
     qc->depth = 1;
 
     for (int i=0;i<size;i++){
@@ -138,6 +139,31 @@ Circuit* INIT_CIRCUIT(int size){
     qc->size = size;
 
     return qc;
+}
+
+void FREE_CIRCUIT(Circuit *circuit){
+    if (circuit == NULL){
+        return;
+    }
+    for (int i = 0; i < circuit->size; i++){
+        Qubit *qubit = circuit->Q[i];
+        Operation *op = qubit->next;
+        while (op != NULL){
+            Operation *next = op->next;
+            if (op->owns_gate_data){
+                FREE_GATE(op->gate);
+                free(op->parameters);
+                if (op->impacted_qbts_num > 1){
+                    free(op->impacted_qbts);
+                }
+            }
+            free(op);
+            op = next;
+        }
+        free(qubit);
+    }
+    free(circuit->Q);
+    free(circuit);
 }
 
 /* Add a single-qubit operation at the next depth for qbt_ind. */
@@ -152,11 +178,12 @@ void Add_OP(Gate* gate, int qbt_ind, Circuit *c, float complex *params, int para
     op->name = name;
     op->gate = gate;
     op->next = NULL;
-    op->impacted_qbts = &qbt_ind;
+    op->impacted_qbts = &qubit->index;
     op->impacted_qbts_num=1;
     op->param_ind=-1;
     op->parameters = params;
     op->param_num = param_num;
+    op->owns_gate_data = 0;
 
     if (qubit->next == NULL){
         qubit->next = op;
@@ -195,6 +222,7 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
         op->param_ind = i;
         op->name = name;
         op->param_num = param_num;
+        op->owns_gate_data = 0;
 
         int index = qbt_ind[i];
         Qubit *qubit = c->Q[index];
@@ -218,6 +246,7 @@ void Add_OPM(Gate* gate, int *qbt_ind, int input_num, Circuit *c, float complex 
 void PauliX(Circuit *qc, int target_qbt){
     Gate *gate = initPX();
     Add_OP(gate,target_qbt,qc,NULL,0,"X");
+    qc->Q[target_qbt]->last->owns_gate_data = 1;
 }
 
 void CX(Circuit *qc, int control_qbt, int target_qbt){
@@ -226,6 +255,7 @@ void CX(Circuit *qc, int control_qbt, int target_qbt){
     qbts[1] = target_qbt;
     
     Add_OPM(initCX(), qbts, 2,qc,NULL, 0, "CNOT");
+    qc->Q[control_qbt]->last->owns_gate_data = 1;
 }
 
 void RZ(Circuit *qc, int target_qbt, float complex rotation){
@@ -233,14 +263,17 @@ void RZ(Circuit *qc, int target_qbt, float complex rotation){
     float complex *param = malloc(sizeof(float complex));
     *param = rotation;
     Add_OP(RZ_mx(rotation),target_qbt,qc,param, 1, "RZ");
+    qc->Q[target_qbt]->last->owns_gate_data = 1;
 }
 
 void Hadamard(Circuit *qc, int target_qbt){
     Gate *gate = initH();
     Add_OP(gate,target_qbt,qc,NULL,0,"H");
+    qc->Q[target_qbt]->last->owns_gate_data = 1;
 }
 
 void Identity(Circuit *qc, int target_qbt){
     Gate *gate=initI();
     Add_OP(gate, target_qbt, qc, NULL, 0, "I");
+    qc->Q[target_qbt]->last->owns_gate_data = 1;
 }

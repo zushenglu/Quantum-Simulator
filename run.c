@@ -25,6 +25,7 @@ int main(int argnum, char** arg){
 
     PRINT_CIRCUIT(qc,SIZE);
     simulate(qc);
+    FREE_CIRCUIT(qc);
 
     return 0;
 }
