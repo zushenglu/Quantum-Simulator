@@ -4,6 +4,7 @@ LDLIBS = -lm
 
 SRCS = gate.c circuit.c qubit.c simulator.c run.c convertor.c
 OBJS = $(SRCS:.c=.o)
+DEPS = $(OBJS:.o=.d)
 
 .PHONY: all clean debug run
 
@@ -16,11 +17,13 @@ myproj: $(OBJS)
 run: myproj
 	./myproj
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o: %.c makefile
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 
 clean:
-	rm -f $(OBJS) myproj
+	rm -f $(OBJS) $(DEPS) myproj
 
 debug: 
+
+-include $(DEPS)

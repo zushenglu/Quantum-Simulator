@@ -3,6 +3,7 @@ a.out
 backup
 .DS_Store
 *.o
+*.d
 scout
 myproj
 a.c
