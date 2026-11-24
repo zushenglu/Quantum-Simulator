@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <limits.h>
 #include <complex.h>
 #include <stdlib.h>
 #include <math.h>
@@ -141,6 +142,17 @@ Circuit* INIT_CIRCUIT(int size){
     return qc;
 }
 
+static void free_operation(Operation *op){
+    if (op->owns_gate_data){
+        FREE_GATE(op->gate);
+        free(op->parameters);
+        if (op->impacted_qbts_num > 1){
+            free(op->impacted_qbts);
+        }
+    }
+    free(op);
+}
+
 void FREE_CIRCUIT(Circuit *circuit){
     if (circuit == NULL){
         return;
@@ -150,14 +162,7 @@ void FREE_CIRCUIT(Circuit *circuit){
         Operation *op = qubit->next;
         while (op != NULL){
             Operation *next = op->next;
-            if (op->owns_gate_data){
-                FREE_GATE(op->gate);
-                free(op->parameters);
-                if (op->impacted_qbts_num > 1){
-                    free(op->impacted_qbts);
-                }
-            }
-            free(op);
+            free_operation(op);
             op = next;
         }
         free(qubit);
@@ -276,4 +281,170 @@ void Identity(Circuit *qc, int target_qbt){
     Gate *gate=initI();
     Add_OP(gate, target_qbt, qc, NULL, 0, "I");
     qc->Q[target_qbt]->last->owns_gate_data = 1;
+}
+
+const Operation *circuit_gate_at(const Circuit *circuit, int wire, int depth){
+    if (!circuit || wire < 0 || wire >= circuit->size || depth < 1){
+        return NULL;
+    }
+    const Operation *op = circuit->Q[wire]->next;
+    while (op && op->depth < depth){
+        op = op->next;
+    }
+    return op && op->depth == depth ? op : NULL;
+}
+
+/* Unlink every endpoint before releasing their shared gate data. */
+static void remove_gate(Circuit *circuit, const Operation *selected){
+    Operation *removed = NULL;
+    for (int i = 0; i < selected->impacted_qbts_num; i++){
+        Qubit *wire = circuit->Q[selected->impacted_qbts[i]];
+        Operation *previous = NULL;
+        Operation **link = &wire->next;
+        while ((*link)->depth < selected->depth){
+            previous = *link;
+            link = &previous->next;
+        }
+        Operation *op = *link;
+        *link = op->next;
+        if (op == wire->last){
+            wire->last = previous;
+            wire->depth = previous ? previous->depth : 0;
+        }
+        op->next = removed;
+        removed = op;
+    }
+    while (removed){
+        Operation *next = removed->next;
+        free_operation(removed);
+        removed = next;
+    }
+    /* INIT_CIRCUIT uses one visible column even for an empty circuit. */
+    circuit->depth = 1;
+    for (int i = 0; i < circuit->size; i++){
+        if (circuit->depth < circuit->Q[i]->depth){
+            circuit->depth = circuit->Q[i]->depth;
+        }
+    }
+}
+
+const char *circuit_remove_gate(Circuit *circuit, int wire, int depth){
+    const Operation *op = circuit_gate_at(circuit, wire, depth);
+    if (!op){
+        return "No gate at the selected position.";
+    }
+    remove_gate(circuit, op);
+    return NULL;
+}
+
+static void insert_at_depth(Circuit *circuit, int index, Operation *op){
+    Qubit *wire = circuit->Q[index];
+    Operation **link = &wire->next;
+    while (*link && (*link)->depth < op->depth){
+        link = &(*link)->next;
+    }
+    op->next = *link;
+    *link = op;
+    if (!op->next){
+        wire->last = op;
+        wire->depth = op->depth;
+    }
+    if (op->depth > circuit->depth){
+        circuit->depth = op->depth;
+    }
+}
+
+static const char *set_gate(Circuit *circuit, CircuitGateEdit edit, const Operation *old){
+    int count = edit.kind == CIRCUIT_CX ? 2 : 1;
+    int wires[] = {edit.wire, edit.target};
+    if (!circuit || edit.depth < 1 || edit.depth == INT_MAX){
+        return "Invalid circuit or column.";
+    }
+    if (edit.kind == CIRCUIT_RZ && !isfinite(edit.angle)){
+        return "Enter a finite RZ angle in radians.";
+    }
+    if (count == 2 && edit.wire == edit.target){
+        return "Choose different control and target wires.";
+    }
+    for (int i = 0; i < count; i++){
+        if (wires[i] < 0 || wires[i] >= circuit->size){
+            return "Wire is outside the circuit.";
+        }
+        const Operation *op = circuit_gate_at(circuit, wires[i], edit.depth);
+        if (op && !(old && op->depth == old->depth && op->impacted_qbts == old->impacted_qbts)){
+            return "A wire is already occupied in this column.";
+        }
+    }
+
+    /* Build the entire replacement before unlinking the old gate. */
+    Operation *op = calloc(1, sizeof(*op));
+    if (!op){
+        return "Out of memory.";
+    }
+    op->depth = edit.depth;
+    op->param_ind = -1;
+    op->owns_gate_data = 1;
+    op->impacted_qbts_num = count;
+    op->impacted_qbts = &circuit->Q[edit.wire]->index;
+    Operation *target = NULL;
+    switch (edit.kind){
+    case CIRCUIT_H:
+        op->name = "H";
+        op->gate = initH();
+        break;
+    case CIRCUIT_X:
+        op->name = "X";
+        op->gate = initPX();
+        break;
+    case CIRCUIT_RZ:
+        op->name = "RZ";
+        op->parameters = malloc(sizeof(*op->parameters));
+        if (!op->parameters){
+            free_operation(op);
+            return "Out of memory.";
+        }
+        op->parameters[0] = edit.angle;
+        op->param_num = 1;
+        op->gate = RZ_mx(edit.angle);
+        break;
+    case CIRCUIT_CX:
+        op->name = "CNOT";
+        op->param_ind = 0;
+        op->impacted_qbts = malloc(sizeof(wires));
+        target = malloc(sizeof(*target));
+        if (!op->impacted_qbts || !target){
+            free(target);
+            free_operation(op);
+            return "Out of memory.";
+        }
+        memcpy(op->impacted_qbts, wires, sizeof(wires));
+        op->gate = initCX();
+        *target = *op;
+        target->param_ind = 1;
+        target->owns_gate_data = 0;
+        break;
+    default:
+        free_operation(op);
+        return "Unknown gate.";
+    }
+    if (old){
+        remove_gate(circuit, old);
+    }
+    insert_at_depth(circuit, edit.wire, op);
+    if (target){
+        insert_at_depth(circuit, edit.target, target);
+    }
+    return NULL;
+}
+
+const char *circuit_place_gate(Circuit *circuit, CircuitGateEdit edit){
+    return set_gate(circuit, edit, NULL);
+}
+
+const char *circuit_update_gate(Circuit *circuit, int wire, int depth, CircuitGateEdit edit){
+    const Operation *old = circuit_gate_at(circuit, wire, depth);
+    if (!old){
+        return "No gate at the selected position.";
+    }
+    return set_gate(circuit, edit, old);
 }

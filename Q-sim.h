@@ -9,5 +9,6 @@
 #include <complex.h>
 #include <math.h>
 #include <stdlib.h>
+#include "workflow.h"
 
 #endif

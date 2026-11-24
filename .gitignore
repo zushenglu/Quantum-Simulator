@@ -6,4 +6,6 @@ backup
 *.d
 scout
 myproj
+/editor
+/tests/test_editor
 a.c

@@ -3,6 +3,7 @@
 
 #include "Q-sim.h"
 
+
 int main(int argnum, char** arg){
 
 
@@ -24,8 +25,8 @@ int main(int argnum, char** arg){
 
 
     PRINT_CIRCUIT(qc,SIZE);
-    simulate(qc);
+    int status = workflow_run(0, qc);
     FREE_CIRCUIT(qc);
 
-    return 0;
+    return status;
 }

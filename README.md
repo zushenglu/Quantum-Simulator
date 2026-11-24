@@ -14,6 +14,7 @@ This is a learning prototype, not a production-ready simulator or a replacement 
   - Z-axis rotation (`RZ`)
 - Controlled-NOT (`CNOT` / `CX`)
 - Basis-state probability output after simulation
+- Keyboard-driven terminal circuit editor with a selectable simulation workflow
 
 `run.c` contains the current example circuit.
 
@@ -43,6 +44,18 @@ Remove generated objects and the executable:
 make clean
 ```
 
+## Terminal editor
+
+The editor additionally requires ncurses headers and the ncurses library. Build and launch it in a terminal:
+
+```sh
+make editor
+./editor
+```
+
+
+Run the editing and workflow regression tests with `make test`.
+
 ## Project status and limitations
 
 This repository intentionally remains an early exploration project. Current limitations include:
@@ -50,7 +63,7 @@ This repository intentionally remains an early exploration project. Current limi
 - The simulator constructs dense full-system matrices, so time and memory scale exponentially with qubit count.
 - Gate coverage is intentionally small.
 - It reports state-vector probabilities but does not provide a full measurement/sampling API.
-- Correctness tests, benchmarks, robust memory management, and a cleaner public API are future work.
+- Tests cover circuit editing and small dense simulations. Performance benchmarks and broader simulator coverage are future work.
 - Some experimental or incomplete functions remain in the codebase as part of the original learning path.
 
 The main value of the project is the implementation work behind the abstraction: complex amplitudes, tensor products, gate matrices, controlled operations, and state-vector evolution in C.

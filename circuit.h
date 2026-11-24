@@ -26,6 +26,21 @@ typedef struct struct_circuit {
     int size;
 } Circuit;
 
+typedef enum { CIRCUIT_H, CIRCUIT_X, CIRCUIT_RZ, CIRCUIT_CX } CircuitGateKind;
+typedef struct {
+    CircuitGateKind kind;
+    int wire;     /* Zero-based wire, or control for CX. */
+    int depth;    /* One-based column. */
+    int target;   /* CX only. */
+    float angle;  /* RZ only, in radians. */
+} CircuitGateEdit;
+
+const Operation *circuit_gate_at(const Circuit *circuit, int wire, int depth);
+/* Edits return NULL on success or a static error message. */
+const char *circuit_place_gate(Circuit *circuit, CircuitGateEdit edit);
+const char *circuit_remove_gate(Circuit *circuit, int wire, int depth);
+const char *circuit_update_gate(Circuit *circuit, int wire, int depth, CircuitGateEdit edit);
+
 void PRINT_COMPLEX(float complex input);
 
 void PRINT_MX(float complex **mx, int sl);
