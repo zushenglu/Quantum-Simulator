@@ -10,13 +10,13 @@ TIMEFORMAT='%3R'
 
 pwd
 # Run from the repository root.
-output=benchmark/strong_results.csv
 circuit="./test_circuit"
-size="8" # only 8 or 16
+size="10" # 8 through 16
+size="${1-$size}"
 
 run_exp() {
     local circuit=$1 thread=$2 algo=$3 elapsed
-    echo "Testing the $circuit circuit with $thread thread(s)"
+    # echo "Testing the $circuit circuit with $thread thread(s)"
     export OMP_NUM_THREADS=$thread
     elapsed=$(
         { time "$circuit" "$algo" "$size" >/dev/null 2>&3; } 3>&2 2>&1
@@ -25,6 +25,8 @@ run_exp() {
 }
 
 mkdir -p benchmark
+run_dir=$(mktemp -d "benchmark/simulate_strong_$(date +%Y%m%d_%H%M%S)_XXXXXX")
+output="$run_dir/result.csv"
 printf 'qubit,algo,thread,time\n' > "$output"
 # for algo in 0 2; do
 for thread in 1 2 3 4 8 16 24 32 40; do

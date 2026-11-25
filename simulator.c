@@ -48,8 +48,8 @@ static float complex **tensor_product_parallel(float complex *const *matrix, int
                                       float complex *const *factor){
 
     float complex **product = malloc(2 * size * sizeof(*product));
-    for (int i=0; i<2*size;i++){
-        product[i] = malloc(2 * size * sizeof(*product[i]));
+    for (int row = 0; row < 2 * size; row++){
+        product[row] = malloc(2 * size * sizeof(*product[row]));
     }
 
     #pragma omp parallel for collapse(2) default(none) shared(product, matrix, size, factor)
@@ -185,7 +185,7 @@ static float complex **build_controlled_matrix_parallel(const Operation *op, int
 
     float complex **matrix = build_gate_matrix_parallel(qubits, identity, control, zero, -1, NULL);
     float complex **active = build_gate_matrix_parallel(qubits, identity, control, one, target, target_gate);
-    
+
     #pragma omp parallel for collapse(2) default(none) shared(matrix, active, size)
     for (int row = 0; row < size; row++){
         for (int col = 0; col < size; col++){
@@ -287,7 +287,7 @@ void simulate_parallel(Circuit* circuit){
         cursor[i] = circuit->Q[i]->next;
     }
 
-        for (int depth = 1; depth <= circuit->depth; depth++){
+    for (int depth = 1; depth <= circuit->depth; depth++){
         for (int i = 0; i < qubits; i++){
             const Operation *op = cursor[i];
             if (op == NULL || op->depth != depth){
@@ -296,14 +296,14 @@ void simulate_parallel(Circuit* circuit){
 
             float complex **matrix;
             if (op->impacted_qbts_num > 1){
-                matrix = build_controlled_matrix(op, qubits, size, identity->mx);
+                matrix = build_controlled_matrix_parallel(op, qubits, size, identity->mx);
                 for (int j = 0; j < op->impacted_qbts_num; j++){
                     int index = op->impacted_qbts[j];
                     cursor[index] = cursor[index]->next;
                 }
             }
             else{
-                matrix = build_gate_matrix(qubits, identity->mx, i, op->gate->mx, -1, NULL);
+                matrix = build_gate_matrix_parallel(qubits, identity->mx, i, op->gate->mx, -1, NULL);
                 cursor[i] = op->next;
             }
 

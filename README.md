@@ -22,7 +22,7 @@ This is a learning prototype, not a production-ready simulator or a replacement 
 
 Requirements:
 
-- GCC (or another C compiler with C complex-number support)
+- GCC or another C compiler with C complex-number and OpenMP support. On macOS, the makefile looks for Homebrew LLVM.
 - `make`
 - the standard math library (`libm`)
 
@@ -53,7 +53,7 @@ make editor
 ./editor
 ```
 
-Press `r` to choose **Dense simulator** (one gate at a time) or **Dense simulator 2 (per layer)**.
+Press `r` to choose **Dense simulator** (one gate at a time), **Dense simulator 2 (per layer)**, or **Dense simulator (parallel)**.
 
 Run the editing and workflow regression tests with `make test`.
 
