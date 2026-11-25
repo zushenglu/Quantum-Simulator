@@ -3,8 +3,33 @@
 
 #include "Q-sim.h"
 
+#if defined(BENCHMARK_SMALL) || defined(BENCHMARK_LARGE)
+#ifndef _OPENMP
+#error "Build the benchmark with OpenMP enabled."
+#endif
 
-int main(int argnum, char** arg){
+#ifdef BENCHMARK_LARGE
+Circuit *build_large_circuit(void);
+#else
+Circuit *build_benchmark_circuit(int qubits, int rounds);
+#endif
+
+int main(void){
+#ifdef BENCHMARK_LARGE
+    Circuit *circuit = build_large_circuit();
+#else
+    Circuit *circuit = build_benchmark_circuit(9, 3);
+#endif
+    enum { PARALLEL_WORKFLOW = 2 };
+    int status = workflow_run(PARALLEL_WORKFLOW, circuit);
+    if (circuit != NULL){
+        FREE_CIRCUIT(circuit);
+    }
+    return status;
+}
+#else
+
+int main(void){
 
 
 
@@ -30,3 +55,4 @@ int main(int argnum, char** arg){
 
     return status;
 }
+#endif

@@ -6,13 +6,30 @@ CURSES_LIBS ?= -lncurses
 CORE_OBJS = gate.o circuit.o qubit.o simulator.o convertor.o workflow.o
 OBJS = $(CORE_OBJS) run.o tui.o tests/test_editor.o
 DEPS = $(OBJS:.o=.d)
+BENCHMARKS = circuit_small test_circuit
 
 .PHONY: all clean debug run test
 
-all: run
+all: test_circuit run
 
 myproj: $(CORE_OBJS) run.o
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+circuit_small: BENCHMARK_CPPFLAGS = -DBENCHMARK_SMALL
+circuit_small: run.c my_circuit.c
+test_circuit: BENCHMARK_CPPFLAGS = -Dstoi=atoi
+test_circuit: test_circuit.c
+
+ifeq ($(shell uname -s),Darwin)
+ifeq ($(origin CC),file)
+test_circuit: CC = $(firstword $(wildcard /opt/homebrew/opt/llvm/bin/clang /usr/local/opt/llvm/bin/clang) clang)
+test_circuit: LDFLAGS += --ld-path=/usr/bin/ld
+endif
+endif
+
+$(BENCHMARKS): $(CORE_OBJS:.o=.c) $(wildcard *.h) makefile
+	$(CC) $(CPPFLAGS) $(BENCHMARK_CPPFLAGS) $(CFLAGS) -O2 -fopenmp \
+		$(LDFLAGS) -o $@ $(filter %.c,$^) $(LDLIBS)
 
 editor: $(CORE_OBJS) tui.o
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(CURSES_LIBS) $(LDLIBS)
@@ -31,7 +48,7 @@ run: myproj
 
 
 clean:
-	rm -f $(OBJS) $(DEPS) myproj editor tests/test_editor
+	rm -f $(OBJS) $(DEPS) myproj editor tests/test_editor $(BENCHMARKS)
 
 debug: 
 

@@ -6,6 +6,10 @@ backup
 *.d
 scout
 myproj
+/circuit_small
+/circuit_large
 /editor
 /tests/test_editor
 a.c
+test_circuit
+benchmark/
