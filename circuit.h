@@ -12,7 +12,10 @@ typedef struct struct_operation {
     float complex *parameters;
     int param_num;           // Number of gate parameters.
     int param_ind;           // This qubit's position in a multi-qubit operation.
-    int *impacted_qbts;      // Indices of qubits affected by the operation.
+    int *impacted_qbts;      // Indices of qubits affected by the operation. 
+                             // in this format [control_qbts, controled_qbts] 
+                             // control_qbts count depends on Gate->control_count
+                             // multi-control must ensure controls are sorted
     int impacted_qbts_num;   // Number of affected qubits.
     struct struct_gate *gate;
     struct struct_operation *next;

@@ -84,13 +84,13 @@ static void test_legacy_borrowed_inputs_remain_caller_owned(void) {
     FREE_GATE(gate);
 }
 
-static int run_and_capture_workflow(Circuit *c, char *output, size_t capacity) {
+static int run_and_capture_workflow(size_t index, Circuit *c, char *output, size_t capacity) {
     FILE *capture = tmpfile();
     assert(capture != NULL);
     int saved_stdout = dup(STDOUT_FILENO);
     assert(saved_stdout >= 0);
     assert(dup2(fileno(capture), STDOUT_FILENO) >= 0);
-    int result = workflow_run(0, c);
+    int result = workflow_run(index, c);
     fflush(stdout);
     assert(dup2(saved_stdout, STDOUT_FILENO) >= 0);
     close(saved_stdout);
@@ -133,9 +133,10 @@ static void test_public_builders_and_workflows(void) {
     assert(workflow_run(workflow_count(), c) != 0);
     FREE_CIRCUIT(c);
 
-    /* Workflow 0 simulates the caller's circuit without editing it. */
-    assert(workflow_count() > 0);
+    /* Both dense workflows simulate the caller's circuit without editing it. */
+    assert(workflow_count() >= 2);
     assert(workflow_name(0) != NULL);
+    assert(workflow_name(1) != NULL);
     c = INIT_CIRCUIT(2);
     Hadamard(c, 0);
     CX(c, 0, 1);
@@ -143,18 +144,22 @@ static void test_public_builders_and_workflows(void) {
     const Operation *cx_control_before = circuit_gate_at(c, 0, 2);
     const Operation *cx_target_before = circuit_gate_at(c, 1, 2);
     char output[2048];
-    assert(run_and_capture_workflow(c, output, sizeof(output)) == 0);
-    assert(strstr(output, "00\t\t50.0000") != NULL);
-    assert(strstr(output, "11\t\t50.0000") != NULL);
+    for (size_t index = 0; index < 2; index++) {
+        assert(run_and_capture_workflow(index, c, output, sizeof(output)) == 0);
+        assert(strstr(output, "00\t\t50.0000") != NULL);
+        assert(strstr(output, "11\t\t50.0000") != NULL);
+    }
     assert(circuit_gate_at(c, 0, 1) == h_before);
     assert(circuit_gate_at(c, 0, 2) == cx_control_before);
     assert(circuit_gate_at(c, 1, 2) == cx_target_before);
 
     /* Deleting CX through its target leaves H in place and changes the result. */
     assert(circuit_remove_gate(c, 1, 2) == NULL);
-    assert(run_and_capture_workflow(c, output, sizeof(output)) == 0);
-    assert(strstr(output, "00\t\t50.0000") != NULL);
-    assert(strstr(output, "01\t\t50.0000") != NULL);
+    for (size_t index = 0; index < 2; index++) {
+        assert(run_and_capture_workflow(index, c, output, sizeof(output)) == 0);
+        assert(strstr(output, "00\t\t50.0000") != NULL);
+        assert(strstr(output, "01\t\t50.0000") != NULL);
+    }
     assert(circuit_gate_at(c, 0, 1) == h_before);
     FREE_CIRCUIT(c);
 }

@@ -53,6 +53,7 @@ make editor
 ./editor
 ```
 
+Press `r` to choose **Dense simulator** (one gate at a time) or **Dense simulator 2 (per layer)**.
 
 Run the editing and workflow regression tests with `make test`.
 

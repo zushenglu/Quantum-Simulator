@@ -44,6 +44,38 @@ static float complex **tensor_product(float complex *const *matrix, int size,
     return product;
 }
 
+// directly calculate TP from an array of gate matrix
+void **tensor_product_direct(int dimension,
+    float complex matrix[dimension][dimension],
+    Gate** gates, int gates_len){
+
+    /*
+        trick told by chatgpt, it cited this paper, i did not give it a read
+            https://www.mdpi.com/2225-1146/9/2/18, 
+        
+        just trying it out and see if it works. 
+    */
+    for (int r = 0; r < dimension; r++) {
+        for (int c = 0; c < dimension; c++) {
+
+            float complex value = 1.0f;
+            int stride = dimension;
+
+            for (int k = 0; k < gates_len; k++) {
+                int dims = gates[k]->dimension;
+                stride /= dims;
+
+                int ri = (r / stride) % dims;
+                int ci = (c / stride) % dims;
+
+                value *= gates[k]->mx[ri][ci];
+            }
+
+            matrix[r][c] = value;
+        }
+    }   
+}
+
 /* Qubit 0 is the low bit, so append its factor last. */
 static float complex **build_gate_matrix(int qubits, float complex *const *identity,
                                          int first_index, float complex *const *first,
@@ -123,45 +155,6 @@ Operation** OP_BY_DEPTH(Circuit* circuit, int depth){
     }
 
     return op_arr;
-
-
-}
-
-void simulate2(Circuit* circuit){
-
-    int tot_qbt = circuit->size;
-    int sv_size = pow(2,tot_qbt);
-    // printf("%ld\n", sv_size );
-    // printf("%zu\n", sizeof(float complex));
-    // printf("%zu\n", SIZE_MAX);
-    float complex *statevector = calloc(sv_size, sizeof(float complex));
-
-    float complex **Identity = initI()->mx;
-
-    /* Initialize the state vector to |0...0>. */
-    statevector[0] = 1;
-
-
-    int circuit_depth = circuit->depth;
-    Operation **op_arr;
-
-    // printf("circuit depth: %d\n", circuit_depth);
-
-    // iterate by depth
-    for (int d=1; d<=circuit_depth; d++){
-        int i=0; 
-
-        // op_arr = GATE_BY_DEPTH(circuit, d);
-
-        
-
-    }
-
-
-    ResUnit **result = to_prob(statevector,sv_size);
-    PRINT_RESULT(result,sv_size);
-
-
 }
 
 void simulate(Circuit* circuit){
@@ -211,6 +204,199 @@ void simulate(Circuit* circuit){
     free(statevector);
 }
 
+
+static void generate_depth_p_mapping_(const Operation *const *cursor, Circuit* circuit, int depth, int* p_ind){
+    /*
+        generate permutation pattiong for current depth based on the circuit
+            depth = current depth count
+
+        populate p_ind with permutation matting 
+            p_ind should have same size as circuit->size
+    */
+
+    int qubits = circuit->size;
+
+    // inititalize p_ind
+    for (int i=0;i<qubits;i++){
+        p_ind[i] = i;
+    } 
+
+    int procced_ind[qubits];
+    for (int i=0;i<qubits;i++)
+        procced_ind[i]=0;
+    
+    int next_p = 0;
+
+    // iterate the depth to build p map
+    for (int i = 0; i < qubits; i++){
+
+        const Operation *op = cursor[i];
+        if (op == NULL || op->depth != depth){
+            // for non-multi-qubit op, we don't care the it's position
+            // we permute for multi-qubit and use whichever location it ends with
+            continue;
+        }
+        if (procced_ind[i] == 1)
+            continue;
+        if (op->impacted_qbts_num > 1){
+            // create swap mapping for multi-qbt
+            int *impacted_qbts = op->impacted_qbts;
+            int gate_ind = 0;
+            while (gate_ind < op->impacted_qbts_num){            
+                if (impacted_qbts[gate_ind] != p_ind[next_p]){
+                    // find 1 in vec
+                    int qbt_ind_ind = next_p;
+                    while (qbt_ind_ind < qubits){
+                        // search for target index to swap;
+                        if (p_ind[qbt_ind_ind] == impacted_qbts[gate_ind])
+                            break;
+                        qbt_ind_ind++;
+                    }
+                    // swap
+                    int temp =p_ind[next_p] ;
+                    p_ind[next_p] = p_ind[qbt_ind_ind];
+                    p_ind[qbt_ind_ind]= temp;
+                }
+
+                procced_ind[impacted_qbts[gate_ind]]=1;
+                gate_ind ++;
+                next_p ++;
+            }
+
+        }
+    }
+}
+
+static int permute_index(int index, int *p_ind, int n) {
+    // permute index, calculate new basis-state vector index
+    int result = 0;
+
+    for (int k = 0; k < n; k++) {
+        int bit = (index >> p_ind[k]) & 1;
+        result |= bit << (n - 1 - k);
+    }
+
+    return result;
+}
+
+void simulate2(Circuit* circuit){
+    /*
+        optimize based on simulate from gate to depth based matrix generation
+        runtime: O(g*2^(2n)) to O(d*2^(2n)) where 
+            g = # of gates
+            n = # of qubits
+            d = circuit depth
+
+        
+        generally, we can replace identity to the gate on corresponding index during the TP
+        for multi-qubite gates, we can swap indexs so multi-qubit gates impacts continuous
+        qubits. (permutation equivalent property, detail refer to Kronecker) The permutation
+        matrix can be further simplized to an index map.
+            > A tp B = P mp (B tp A) mp P_dagger
+    */
+    int qubits = circuit->size;
+    int size = pow(2, qubits);
+    float complex *statevector = calloc(size, sizeof(*statevector));
+    statevector[0] = 1;
+
+    float complex (*matrix)[size] = malloc((size_t)size * sizeof(*matrix));
+
+    Gate *identity = initI();
+    const Operation **cursor = malloc(qubits * sizeof(*cursor));
+    for (int i = 0; i < qubits; i++){
+        cursor[i] = circuit->Q[i]->next;
+    }
+
+    int *p_ind = malloc(sizeof(int)*qubits);
+    Gate **gates = malloc(sizeof(*gates)*qubits);
+    int *pass_ind = calloc(qubits, sizeof(int));
+
+    for (int depth = 1; depth <= circuit->depth; depth++){
+
+        // reset pass_ind
+        for (int k=0;k<qubits;k++)
+            pass_ind[k]=0;
+
+        int next_ind = 0;
+        generate_depth_p_mapping_(cursor, circuit, depth, p_ind);
+
+        
+        // extract depth gate vectors
+        for (int i = 0; i < qubits; i++){
+
+            int op_ind = p_ind[i];
+
+            if (pass_ind[op_ind] == 1){
+                continue;
+            }
+
+            const Operation *op = cursor[op_ind];
+            // float complex **matrix;
+            if (op == NULL || op->depth != depth){
+                pass_ind[op_ind] = 1;
+                gates[next_ind++] = identity;
+                continue;
+            }
+
+            if (op->impacted_qbts_num == 1){
+                pass_ind[op_ind] = 1;
+                gates[next_ind++] = op->gate;
+                cursor[op_ind] = op->next;
+                continue;
+            }
+
+            if (op->impacted_qbts_num > 1){
+                // matrix = build_controlled_matrix(op, qubits, size, identity->mx);
+                gates[next_ind++] = op->gate;
+                for (int j = 0; j < op->impacted_qbts_num; j++){
+                    int index = op->impacted_qbts[j];
+                    cursor[index] = cursor[index]->next;
+                    pass_ind[index]=1;
+                }
+            }
+        }        
+
+        tensor_product_direct(size, matrix, gates, next_ind); // perform direct tp, now we have U'
+
+        // create maping based off p
+        int *mapping = malloc(size * sizeof(int));
+        for (int i = 0; i < size; i++)
+            mapping[i] = permute_index(i, p_ind, qubits);
+        
+        // Reorder statevector, temp = P|phi>
+        float complex *temp = malloc(size * sizeof(*temp));
+
+        for (int i = 0; i < size; i++)
+            temp[mapping[i]] = statevector[i];
+
+        // apply U', next = U'P|phi>
+        float complex *next = MX_MAP2(temp, size, size, matrix);
+
+        // restore ordering with P^dagger, next_state = P^dagggerU'P|phi> = U|phi>
+        float complex *next_state = malloc(size * sizeof(*next_state));
+
+        for (int i = 0; i < size; i++)
+            next_state[i] = next[mapping[i]];
+
+        free(statevector);
+        free(mapping);
+        free(next);
+        free(temp);
+        statevector=next_state;
+    }
+    free(pass_ind);
+    free(gates);
+    free(matrix);
+    free(p_ind);
+    free(cursor);
+    FREE_GATE(identity);
+    ResUnit **result = to_prob(statevector, size);
+    PRINT_RESULT(result, size);
+    FREE_RESULT(result, size);
+    free(statevector);
+}
+
+
 void process_qbt(Circuit*, int qbt_ind){
     
 }
@@ -230,6 +416,23 @@ float complex* MX_MAP(float complex * vector, int vec_dim, float complex ** mx, 
     return new;
 
 }
+
+float complex* MX_MAP2(float complex * vector, int vec_dim, int dimension,
+    float complex mx[dimension][dimension]){
+
+    float complex *new = (float complex*) calloc(vec_dim, sizeof(float complex));
+
+    for (int i=0;i<dimension;i++){
+
+        for (int j=0;j<dimension;j++){
+            new[i] += mx[i][j] * vector[j];
+        }
+    }
+
+    return new;
+
+}
+
 
 float complex* TS_PD(float complex *vector1, int vec1_dim, float complex *vector2, int vec2_dim){
 

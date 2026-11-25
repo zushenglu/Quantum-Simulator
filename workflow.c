@@ -8,21 +8,24 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static int run_dense(Circuit *circuit){
-    /* simulate() stores the number of amplitudes in a signed int. */
+static int run_dense(Circuit *circuit, void (*simulator)(Circuit *)){
+    /* Both simulators store the number of amplitudes in a signed int. */
     if (circuit->size >= (int)(sizeof(int) * CHAR_BIT - 1)){
         fprintf(stderr, "Too many qubits for the dense simulator's integer indices.\n");
         return 1;
     }
 
 #ifdef _SC_PHYS_PAGES
-    /* Lower bound on peak storage. CX holds two full matrices at once. */
-    int matrices = 0;
-    for (int i = 0; i < circuit->size && matrices < 2; i++){
-        for (const Operation *op = circuit->Q[i]->next; op; op = op->next){
-            matrices = op->impacted_qbts_num > 1 ? 2 : 1;
-            if (matrices == 2){
-                break;
+    /* simulate2 always allocates one matrix. simulate needs two for CX. */
+    int matrices = 1;
+    if (simulator == simulate){
+        matrices = 0;
+        for (int i = 0; i < circuit->size && matrices < 2; i++){
+            for (const Operation *op = circuit->Q[i]->next; op; op = op->next){
+                matrices = op->impacted_qbts_num > 1 ? 2 : 1;
+                if (matrices == 2){
+                    break;
+                }
             }
         }
     }
@@ -39,15 +42,16 @@ static int run_dense(Circuit *circuit){
     }
 #endif
 
-    simulate(circuit);
+    simulator(circuit);
     return 0;
 }
 
 static const struct {
     const char *name;
-    int (*run)(Circuit *);
+    void (*simulator)(Circuit *);
 } workflows[] = {
-    {"Dense simulator", run_dense},
+    {"Dense simulator", simulate},
+    {"Dense simulator 2 (per layer)", simulate2},
 };
 
 size_t workflow_count(void){
@@ -63,5 +67,5 @@ int workflow_run(size_t index, Circuit *circuit){
         fprintf(stderr, "Select a valid workflow and circuit.\n");
         return 1;
     }
-    return workflows[index].run(circuit);
+    return run_dense(circuit, workflows[index].simulator);
 }

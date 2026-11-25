@@ -96,6 +96,7 @@ Gate* initPX(){
     PauliX->mx[0][1] = 1;
     PauliX->mx[1][0] = 1;
     PauliX->mx[1][1] = 0;
+    PauliX->control_count=1;
     return PauliX;
 }
 
