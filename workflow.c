@@ -9,16 +9,16 @@
 #include <unistd.h>
 
 static int run_dense(Circuit *circuit, void (*simulator)(Circuit *)){
-    /* Both simulators store the number of amplitudes in a signed int. */
+    /* Dense simulators store the number of amplitudes in a signed int. */
     if (circuit->size >= (int)(sizeof(int) * CHAR_BIT - 1)){
         fprintf(stderr, "Too many qubits for the dense simulator's integer indices.\n");
         return 1;
     }
 
 #ifdef _SC_PHYS_PAGES
-    /* simulate2 always allocates one matrix. simulate needs two for CX. */
+    /* simulate2 always allocates one matrix. Per-gate simulators need two for CX. */
     int matrices = 1;
-    if (simulator == simulate){
+    if (simulator == simulate || simulator == simulate_parallel){
         matrices = 0;
         for (int i = 0; i < circuit->size && matrices < 2; i++){
             for (const Operation *op = circuit->Q[i]->next; op; op = op->next){
@@ -52,6 +52,7 @@ static const struct {
 } workflows[] = {
     {"Dense simulator", simulate},
     {"Dense simulator 2 (per layer)", simulate2},
+    {"Dense simulator (parallel)",    simulate_parallel},
 };
 
 size_t workflow_count(void){
