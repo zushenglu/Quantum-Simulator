@@ -44,6 +44,19 @@ static float complex **tensor_product(float complex *const *matrix, int size,
     return product;
 }
 
+/* Append one factor to a square tensor product. */
+static float complex **tensor_product_2(float complex *const *matrix, int size,
+                                      float complex *const *factor, int factor_size){
+    float complex **product = malloc(factor_size * size * sizeof(*product));
+    for (int row = 0; row < factor_size * size; row++){
+        product[row] = malloc(factor_size * size * sizeof(*product[row]));
+        for (int col = 0; col < factor_size * size; col++){
+            product[row][col] = matrix[row / factor_size][col / factor_size] * factor[row % factor_size][col % factor_size];
+        }
+    }
+    return product;
+}
+
 static float complex **tensor_product_parallel(float complex *const *matrix, int size,
                                       float complex *const *factor){
 
@@ -145,6 +158,25 @@ static float complex **build_gate_matrix_parallel(int qubits, float complex *con
         }
         matrix = product;
         size *= 2;
+    }
+    return matrix;
+}
+
+static float complex **build_depth_matrix(int gate_count, Gate *const *gates){
+    float complex unit = 1;
+    float complex *unit_row = &unit;
+    float complex **matrix = &unit_row;
+    int size = 1;
+
+    /* The first factor acts on the highest bits of the permuted state. */
+    for (int index = 0; index < gate_count; index++){
+        const Gate *gate = gates[index];
+        float complex **product = tensor_product_2(matrix, size, gate->mx, gate->dimension);
+        if (size > 1){
+            free_matrix(matrix, size);
+        }
+        matrix = product;
+        size *= gate->dimension;
     }
     return matrix;
 }
@@ -416,9 +448,8 @@ void simulate2(Circuit* circuit){
     float complex *statevector = calloc(size, sizeof(*statevector));
     statevector[0] = 1;
 
-    float complex (*matrix)[size] = malloc((size_t)size * sizeof(*matrix));
-
     Gate *identity = initI();
+    // float complex (*matrix)[size] = malloc((size_t)size * sizeof(*matrix)); //for direct method
     const Operation **cursor = malloc(qubits * sizeof(*cursor));
     for (int i = 0; i < qubits; i++){
         cursor[i] = circuit->Q[i]->next;
@@ -473,7 +504,8 @@ void simulate2(Circuit* circuit){
             }
         }        
 
-        tensor_product_direct(size, matrix, gates, next_ind); // perform direct tp, now we have U'
+        // tensor_product_direct(size, matrix, gates, next_ind); // perform direct tp, now we have U'
+        float complex **matrix = build_depth_matrix(next_ind, gates);
 
         // create maping based off p
         int *mapping = malloc(size * sizeof(int));
@@ -487,7 +519,8 @@ void simulate2(Circuit* circuit){
             temp[mapping[i]] = statevector[i];
 
         // apply U', next = U'P|phi>
-        float complex *next = MX_MAP2(temp, size, size, matrix);
+        float complex *next = MX_MAP(temp, size, matrix, size);
+        free_matrix(matrix, size);
 
         // restore ordering with P^dagger, next_state = P^dagggerU'P|phi> = U|phi>
         float complex *next_state = malloc(size * sizeof(*next_state));
@@ -503,7 +536,6 @@ void simulate2(Circuit* circuit){
     }
     free(pass_ind);
     free(gates);
-    free(matrix);
     free(p_ind);
     free(cursor);
     FREE_GATE(identity);
